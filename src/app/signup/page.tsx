@@ -82,7 +82,6 @@ export default function SignUpPage() {
   const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const [googleUser, setGoogleUser] = useState<any>(null);
   const [authMethod, setAuthMethod] = useState<"email" | "google">("email");
 
   // Email validation
@@ -127,9 +126,6 @@ export default function SignUpPage() {
               }, 2000);
               return;
             }
-
-            // New Google user - proceed with signup completion
-            setGoogleUser(data.session.user);
             // Set username from Google user data
             setEmail(data.session.user.email || '');
             setStep("finalDetails");
@@ -402,7 +398,7 @@ export default function SignUpPage() {
     updates[matchField] = usn;
   
     const { error: updateError } = await supabase
-      .from("auth") // your custom table
+      .from("auth")
       .upsert(updates, { onConflict: "id" });
   
     if (updateError) {
@@ -778,7 +774,7 @@ export default function SignUpPage() {
                           exit="exit"
                           className="text-muted-foreground text-sm text-center bg-muted/20 p-3 rounded-lg border border-muted"
                         >
-                          ∴ Use your educational email ID
+                          ∴ Use your college email ID
                         </motion.div>
                       ) : null}
                     </AnimatePresence>

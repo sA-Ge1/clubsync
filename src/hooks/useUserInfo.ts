@@ -31,15 +31,17 @@ export function UserProvider({ children }: UserProviderProps) {
     setLoading(true);
 
     const {
-      data: { user: authUser },
+      data: { user: authUser }
     } = await supabase.auth.getUser();
-
+    
     if (!authUser) {
       setUser(null);
       setLoading(false);
       return;
     }
+    else{
 
+    
     // fetch details from your custom profiles table
     const { data, error } = await supabase
       .from("auth")
@@ -53,13 +55,14 @@ export function UserProvider({ children }: UserProviderProps) {
 
     setUser({
       auth_id: authUser.id,
-      email: authUser.email!||data?.email,
-      name:authUser.user_metadata.name,
-      role: data?.role,
-      user_id: data?.student_id||data?.club_id||data?.faculty_id,
+      email: authUser.email!??data?.email??"",
+      name:authUser.user_metadata.name??"",
+      role: data?.role??"notset",
+      user_id: data?.student_id??data?.club_id??data?.faculty_id??"notset",
     });
 
     setLoading(false);
+  }
   };
 
   useEffect(() => {

@@ -71,7 +71,7 @@ export default function ContactPage() {
                 {
                   icon: <Mail className="h-6 w-6 text-primary" />,
                   title: "Email",
-                  details: ["reportgenemail@gmail.com", "adityakarumbaiah@gmail.com"],
+                  details: [ "adityakarumbaiah@gmail.com","akshayshetty@rvce.edu.in"],
                 },
                 {
                   icon: <MapPin className="h-6 w-6 text-primary" />,

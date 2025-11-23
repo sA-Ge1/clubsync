@@ -8,54 +8,54 @@ import Fuse from "fuse.js";
 
 const faqs: { question: string; answer: string }[] = [
   {
-    question: "What is Report Gen?",
+    question: "What is ClubSync?",
     answer:
-      "Report Gen is an online platform designed to simplify the process of creating, customizing, and managing reports. It integrates directly with Google Drive, supports placeholder replacement and downloading the formatted document. Instead of spending hours formatting and filling details, Report Gen automatically structures your reports with the necessary key information — saving both time and effort.",
+      "ClubSync is a platform that helps college clubs manage their inventory, funds, and item requests. It ensures transparency by allowing clubs to track equipment usage, share items with other clubs, and approve or reject student requests with proper department authorization.",
   },
   {
-    question: "Do I need an account to use Report Gen?",
+    question: "How does inventory sharing work?",
     answer:
-      "Yes, an account is required to use Report Gen. You can sign in either with Google Sign-In or with your email credentials. Role-based access ensures that only authorized users can perform specific actions, such as editing templates or managing folders. This provides both flexibility and security within teams.",
+      "Each club maintains an inventory list inside ClubSync. Items can be:\n- Shared with students\n- Lent to other clubs\n- Reserved for events\n\nAll borrowing or lending activities are logged, so clubs always know where their equipment is and who is responsible for it.",
   },
   {
-    question: "What are tokens? How do they work?",
+    question: "Why do students need department approval?",
     answer:
-      "Tokens are the credits used to generate documents within Report Gen. Creating one document requires one token. Tokens are not subscription-based — once purchased, they remain in your account until you use them. They never expire, so you can use them at any time.",
+      "To prevent misuse of club equipment, all student requests must be approved by their respective department. Once approved, the request is forwarded to the club for final confirmation. This two-step authorization ensures accountability and protects club resources.",
   },
   {
-    question: "How do I buy new tokens?",
+    question: "Can clubs share inventory between each other?",
     answer:
-      "You can purchase token packs directly through your account dashboard. Payments are processed securely via Razorpay, ensuring safe and quick transactions. Once your payment is confirmed, the tokens will be credited to your account immediately.",
+      "Yes. Clubs can directly request items from other clubs through ClubSync. Both clubs receive a clear record of the transaction, and the system tracks when the item is returned to maintain accountability.",
   },
   {
-    question: "Why aren’t documents being generated?",
+    question: "How do clubs track their funds?",
     answer:
-      "If your document is not being generated, it could be due to temporary server downtime or high traffic. You can check the server status by clicking on the Report Gen logo, which will start a request to the backend. If the server is starting up, please allow a few minutes and try again.",
+      "ClubSync includes a fund management system where clubs can record expenses, income, event budgets, and reimbursement entries. Everything stays organized so club treasurers and admins can monitor finances without spreadsheets.",
   },
   {
-    question: "How can I modify the templates or add new ones?",
+    question: "Does ClubSync generate reports?",
     answer:
-      "To edit existing templates, you must have at least the Editor role. Due to security and quality concerns, not every user is granted Editor access by default. You can request Editor access through the contact page. Once approved, you can modify templates or add new ones without limitation.",
+      "Yes. Clubs can generate detailed reports on:\n- Inventory usage\n- Student borrowing history\n- Inter-club sharing\n- Fund utilization\n- Expense and income summaries\n\nThese reports make audits and end-of-year reviews much easier.",
   },
   {
-    question: "I purchased tokens but did not receive them. What should I do?",
+    question: "Why can't I see some clubs or items?",
     answer:
-      "In most cases, tokens are credited to your account almost instantly after a successful payment. If you have been charged but tokens are not visible in your account, please reach out to our support team. We will verify your transaction and ensure the tokens are credited as quickly as possible.",
+      "Some clubs mark their inventory as private or restrict visibility to certain roles. Students only see items available for borrowing. If something seems missing, contact the club admin for clarification.",
   },
   {
-    question: "Can I get a refund for my tokens?",
+    question: "Why was my request rejected?",
     answer:
-      "Tokens are generally non-refundable. However, in rare cases where tokens were purchased by mistake and none have been used, we may consider a refund at our sole discretion. Please contact our support team with your transaction details, and we will review your request.",
+      "Requests may be rejected due to:\n- Department disapproval\n- Item unavailability\n- Club-level restrictions\n- Incorrect or incomplete request details\n\nYou can view the rejection reason in your request history.",
   },
   {
-    question: "Will tokens be used even if document fails to generate?",
-    answer: "No, tokens are only used when a document is generated successfully.",
+    question: "Can club admins add or remove items?",
+    answer:
+      "Yes. Club admins can add inventory items, update stock levels, mark broken items, and remove inactive entries. Only users with admin or lead roles can manage inventory.",
   },
   {
-    question:
-      "I am getting a 'You do not have access' message on a page. What should I do?",
+    question: "Who do I contact for technical issues?",
     answer:
-      "Some pages in Report Gen require a minimum role level to access. New users must wait for their accounts to be approved, which usually takes between 24 to 48 hours. In some cases, our team may reach out to you for additional details during this process. \n\nIf your account is already active but you need higher access, please contact support to request a role upgrade. The minimum roles required for different sections are:\n- **Admin role** → Admin pages\n- **Editor role** → Editor pages\n- **Viewer role** → Viewer pages\n- **User role** → Report generation\n\nMake sure your role matches the page you’re trying to access, and reach out if you believe there’s an error with your permissions.",
+      "For bugs, errors, or unexpected behavior, feel free to reach out through the Contact Support page. Sharing screenshots helps us resolve issues quickly.",
   },
 ];
 
@@ -63,10 +63,8 @@ export default function SupportPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [query, setQuery] = useState("");
 
-  // Refs for each FAQ
   const faqRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Setup fuzzy search
   const fuse = new Fuse(faqs, {
     keys: ["question", "answer"],
     threshold: 0.2,
@@ -94,38 +92,35 @@ export default function SupportPage() {
       <div className="max-w-3xl w-full text-center mb-10">
         <h1 className="text-3xl font-bold mb-4">Support & Help</h1>
         <p className="text-muted-foreground">
-          Welcome to the Report Gen support center. Find answers to common
-          questions, learn more about our platform, and reach out if you need
-          extra help.
+          Find answers related to ClubSync inventory management, fund tracking,
+          approvals, and general usage. If you need extra help, reach out anytime.
         </p>
       </div>
 
       {/* General Info */}
       <div className="max-w-3xl w-full mb-12">
-        <h2 className="text-xl font-semibold mb-3">About Report Gen</h2>
+        <h2 className="text-xl font-semibold mb-3">About ClubSync</h2>
         <p className="text-muted-foreground">
-          Report Gen is a cloud-based platform that helps users create,
-          customize, and manage professional reports with ease. It offers secure
-          file management through Google Drive integration, allowing templates
-          and generated reports to be stored safely in the cloud.
+          ClubSync is built to simplify how college clubs manage and share
+          inventory. Clubs can track all equipment, lend items to members or other
+          clubs, and maintain a clean borrowing history. Students can request
+          inventory, but their requests are only processed once their department
+          approves them, ensuring proper authorization.
           <br />
           <br />
-          The core feature of Report Gen is its template-driven document
-          generation. For example, doctors who maintain handwritten records of a
-          patient’s basic information can feed this data into Report Gen. The
-          platform then automatically matches the appropriate template, fills in
-          the details, and generates a ready-to-download report. This saves
-          time, reduces manual effort, and ensures consistency across documents.
+          In addition to inventory management, ClubSync helps clubs keep track of
+          their financial activities. Expense logs, fund updates, and transaction
+          history are all stored in one place, making budgeting and audits much
+          easier.
           <br />
           <br />
-          <b>Important Notice :</b> Report Gen is not affiliated with any medical
-          college, hospital, or healthcare institution. It is a general-purpose
-          reporting tool, and users are solely responsible for how the platform
-          and its generated reports are used.
+          <b>Note:</b> ClubSync does not influence club or department decisions.
+          Approvals and permissions are fully handled by the respective clubs and
+          authorities.
         </p>
       </div>
 
-      {/* Search */}
+      {/* Search Bar */}
       <div className="relative max-w-3xl w-full mb-10 z-10">
         <input
           type="text"
@@ -147,13 +142,21 @@ export default function SupportPage() {
               </li>
             ))}
           </ul>
-        ):(query&&(
-            <p className="absolute top-full mt-5 left-0 right-0 bg-background text-foreground border rounded-lg shadow-lg z-10 px-4 py-2 cursor-pointer hover:bg-muted">No results found</p>
-        ))}
-      </div>
-      {query && (
-        <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-5" onClick={()=>setQuery("")}></div>
+        ) : (
+          query && (
+            <p className="absolute top-full mt-5 left-0 right-0 bg-background text-foreground border rounded-lg shadow-lg z-10 px-4 py-2">
+              No results found
+            </p>
+          )
         )}
+      </div>
+
+      {query && (
+        <div
+          className="fixed inset-0 bg-background/50 backdrop-blur-sm z-5"
+          onClick={() => setQuery("")}
+        ></div>
+      )}
 
       {/* FAQ Section */}
       <div className="max-w-3xl w-full mb-12">
@@ -182,6 +185,7 @@ export default function SupportPage() {
                   }`}
                 />
               </button>
+
               {openIndex === index && (
                 <div className="px-4 pb-4 text-muted-foreground">
                   <ReactMarkdown>{faq.answer}</ReactMarkdown>
@@ -192,10 +196,10 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {/* Contact Link */}
+      {/* Contact Support */}
       <div className="max-w-3xl w-full text-center">
         <p className="text-muted-foreground mb-5">
-          Didn’t find what you’re looking for?
+          Didn’t find the answer you were looking for?
         </p>
         <Link
           href="/contact"

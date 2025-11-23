@@ -27,7 +27,7 @@ const Footer = () => {
               ClubSync
             </h3>
             <p className="text-foreground/50 leading-relaxed w-[80%]">
-              Track and Share inventory with ease! Get access to club resources and data.
+            The all-in-one platform for managing your club, inventory, and member requests. Streamline operations and focus on what matters most.
             </p>
           </div>
 
