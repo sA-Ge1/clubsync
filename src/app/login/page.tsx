@@ -82,7 +82,7 @@ export default function LoginPage() {
   const checkUserExists = async (email: string) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('auth')
         .select('id')
         .eq('email', email)
         .single();
