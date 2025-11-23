@@ -221,7 +221,7 @@ export default function LoginPage() {
       // Redirect to user dashboard
       //refresh the user data
       refresh();
-      router.push("/user");
+      router.push("/");
     }
     setIsVerifyingOTP(false);
   };

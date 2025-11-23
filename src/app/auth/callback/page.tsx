@@ -62,10 +62,10 @@ export default function AuthCallback() {
                   router.push('/login?error=' + encodeURIComponent('Account not present. Please sign up first.'));
                 } else {
                   // User exists, proceed to user page
-                  router.push('/user');
+                  router.push('/');
                 }
               } else {
-                router.push('/user');
+                router.push('/');
               }
             }
           }, 2000);
