@@ -6,11 +6,11 @@ import Link from 'next/link';
 const Footer = () => {
   const exploreLinks = [
     { name: 'Home', href: '/' },
+    { name: 'Explore', href: '/#links' },
     { name: 'Inventory', href: '/inventory' },
     { name: 'Clubs', href: '/clubs' },
-    { name: 'User', href: '/user' },
-    { name: 'Admin', href: '/admin' },
-    { name: 'Features', href: '/#features' },
+    { name: 'Student', href: '/student' },
+    { name: 'Department', href: '/department' },
     { name: 'Login', href: '/login' },
     { name: 'Sign-up', href: '/signup' },
     { name: 'Contact', href: '/contact' },

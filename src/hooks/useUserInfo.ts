@@ -8,7 +8,7 @@ interface UserInfo {
   email: string;
   name: string;
   user_id: string;
-  role?: string;
+  role?: "club" | "student" | "faculty";
 }
 
 interface UserContextType {

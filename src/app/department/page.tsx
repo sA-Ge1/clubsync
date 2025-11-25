@@ -17,6 +17,15 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Loader2, FileCheck } from "lucide-react";
+import {
+  TRANSACTION_STATUS,
+  TransactionStatusCode,
+  getStatusBadgeVariant,
+  getStatusLabel,
+  getDepartmentStatusActions,
+  canAdvanceStatus,
+  parseTransactionStatus,
+} from "@/lib/transactionStatus";
 
 interface DepartmentRequest {
   request_id: string;
@@ -31,7 +40,7 @@ interface DepartmentRequest {
   quantity?: number;
   date_of_issue?: string;
   due_date?: string;
-  status?: string;
+  status: TransactionStatusCode;
   message?: string;
   club_name?: string;
 }
@@ -145,6 +154,7 @@ export default function DepartmentPage() {
         const transaction = req.transactions;
         // Get club name from inventory's club (for student requests) or borrower_club_id (for club requests)
         const clubName = transaction?.inventory?.clubs?.name || transaction?.clubs?.name || "Unknown Club";
+        const status = parseTransactionStatus(transaction?.status);
         return {
           request_id: req.request_id,
           dept_id: req.dept_id,
@@ -158,7 +168,7 @@ export default function DepartmentPage() {
           quantity: transaction?.quantity || 0,
           date_of_issue: transaction?.date_of_issue,
           due_date: transaction?.due_date,
-          status: transaction?.status || "pending",
+          status,
           message: transaction?.message || "",
           club_name: clubName,
         };
@@ -173,17 +183,35 @@ export default function DepartmentPage() {
 
   const handleRequestAction = async (
     transactionId: string,
-    status: "approved" | "rejected"
+    nextStatus: TransactionStatusCode
   ) => {
     try {
+      const request = requests.find((r) => r.transaction_id === transactionId);
+
+      if (!request) {
+        toast.error("Request not found");
+        return;
+      }
+
+      if (!canAdvanceStatus(request.status, nextStatus)) {
+        toast.error("Status can only move forward");
+        return;
+      }
+
+      const allowedStatuses = getDepartmentStatusActions(request.status);
+      if (!allowedStatuses.includes(nextStatus)) {
+        toast.error("Invalid status transition for department");
+        return;
+      }
+
       const { error } = await supabase
         .from("transactions")
-        .update({ status })
+        .update({ status: nextStatus })
         .eq("transaction_id", transactionId);
 
       if (error) throw error;
 
-      toast.success(`Request ${status} successfully`);
+      toast.success(`Request ${nextStatus === TRANSACTION_STATUS.DEPARTMENT_APPROVED ? "approved" : "rejected"} successfully`);
       if (departmentData) {
         await fetchRequests(departmentData.dept_id);
       }
@@ -205,8 +233,9 @@ export default function DepartmentPage() {
     return null;
   }
 
-  const pendingRequests = requests.filter((r) => r.status === "underconsideration");
-  const otherRequests = requests.filter((r) => r.status !== "underconsideration");
+  const pendingRequests = requests.filter((r) => r.status === TRANSACTION_STATUS.DEPARTMENT_PENDING);
+  
+  const otherRequests = requests.filter((r) => r.status !== TRANSACTION_STATUS.DEPARTMENT_PENDING);
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -287,7 +316,10 @@ export default function DepartmentPage() {
                           <Button
                             size="sm"
                             onClick={() =>
-                              handleRequestAction(request.transaction_id, "approved")
+                              handleRequestAction(
+                                request.transaction_id,
+                                TRANSACTION_STATUS.DEPARTMENT_APPROVED
+                              )
                             }
                             className=" bg-background text-green-500 hover:bg-foreground"
                           >
@@ -297,7 +329,10 @@ export default function DepartmentPage() {
                           <Button
                             size="sm"
                             onClick={() =>
-                              handleRequestAction(request.transaction_id, "rejected")
+                              handleRequestAction(
+                                request.transaction_id,
+                                TRANSACTION_STATUS.DEPARTMENT_REJECTED
+                              )
                             }
                             className="bg-background hover:bg-foreground text-destructive hover:text-destructive"
                           >
@@ -370,16 +405,8 @@ export default function DepartmentPage() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            request.status === "approved"
-                              ? "success"
-                              : request.status === "rejected"
-                              ? "destructive"
-                              : "warning"
-                          }
-                        >
-                          {request.status}
+                        <Badge variant={getStatusBadgeVariant(request.status)}>
+                          {getStatusLabel(request.status)}
                         </Badge>
                       </TableCell>
                     </TableRow>

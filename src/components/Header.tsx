@@ -21,6 +21,8 @@ import { supabase } from "@/lib/supabaseClient";
 
 const navItems = [
   { label: "Home", path: "/" },
+  { label: "Explore", path: "/#links" },
+  { label: "Student", path: "/student" },
   { label: "Inventory", path: "/inventory" },
   { label: "Club", path: "/club" },
   { label: "Department", path: "/department" },

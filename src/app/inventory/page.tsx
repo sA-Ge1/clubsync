@@ -21,10 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Package, Search, Loader2 } from "lucide-react";
-import { CalendarIcon } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { TRANSACTION_STATUS } from "@/lib/transactionStatus";
 
 
 interface InventoryItem {
@@ -186,7 +187,7 @@ export default function InventoryPage() {
           inventory_id: selectedItem.inventory_id,
           quantity: requestForm.quantity,
           due_date: requestForm.due_date || null,
-          status: "pending",
+          status: TRANSACTION_STATUS.PROCESSING,
           message: requestForm.message || null,
         });
 
@@ -200,7 +201,7 @@ export default function InventoryPage() {
           inventory_id: selectedItem.inventory_id,
           quantity: requestForm.quantity,
           due_date: requestForm.due_date || null,
-          status: "pending",
+          status: TRANSACTION_STATUS.PROCESSING,
           message: requestForm.message || null,
         });
 
@@ -221,7 +222,7 @@ export default function InventoryPage() {
           return;
         }
 
-        // Create transaction with status "underconsideration"
+        // Create transaction with status "Department Approval Pending"
         const { data: transaction, error: transError } = await supabase
           .from("transactions")
           .insert({
@@ -229,7 +230,7 @@ export default function InventoryPage() {
             inventory_id: selectedItem.inventory_id,
             quantity: requestForm.quantity,
             due_date: requestForm.due_date || null,
-            status: "underconsideration",
+            status: TRANSACTION_STATUS.DEPARTMENT_PENDING,
             message: requestForm.message || null,
           })
           .select()

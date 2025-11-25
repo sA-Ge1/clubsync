@@ -5,7 +5,7 @@ import { useUserInfo } from "@/hooks/useUserInfo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, Package, FileCheck, Shield, Zap, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import MenuTable from "@/components/MenuItems";
 
 export default function Home() {
   const { user, loading } = useUserInfo();
@@ -15,79 +15,89 @@ export default function Home() {
     {
       icon: Users,
       title: "Member Management",
-      description: "Easily manage club members with bulk add and remove functionality. Keep track of all your members in one place.",
+      description:
+        "Maintain complete control over club members with easy add, update, and bulk operations.",
     },
     {
       icon: Package,
       title: "Inventory Tracking",
-      description: "Track and manage your club's inventory. Set items as public or private, and handle borrowing requests seamlessly.",
+      description:
+        "Track items effortlessly. Manage public and private inventory with streamlined borrowing workflows.",
     },
     {
       icon: FileCheck,
       title: "Request Management",
-      description: "Approve or reject inventory requests from students. Streamline the borrowing process with automated workflows.",
+      description:
+        "Approve and reject inventory requests seamlessly with automated, clear workflows.",
     },
     {
       icon: Shield,
       title: "Department Integration",
-      description: "Seamless integration with departments for cross-club requests. Faculty can manage requests efficiently.",
+      description:
+        "Enable faculty-level visibility for cross-club oversight and departmental approvals.",
     },
   ];
 
+  const roleButtons = {
+    club: { label: "Manage Club", href: "/club" },
+    student: { label: "Student Dashboard", href: "/student" },
+    faculty: { label: "Faculty Dashboard", href: "/faculty" },
+  };
+
+  const roleBtn = user?.role ? roleButtons[user.role] : null;
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background" />
+    <div className="min-h-screen bg-background">
+      {/* HERO */}
+      <section className="relative overflow-hidden border-b flex flex-col items-center justify-center min-h-screen">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
           <div className="text-center">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6">
               Welcome to{" "}
-              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 ClubSync
               </span>
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              The all-in-one platform for managing your club, inventory, and member requests.
-              Streamline operations and focus on what matters most.
+
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+              A unified platform to manage members, inventory, requests, and
+              club operations—efficiently and effortlessly.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {!loading && user ? (
                 <>
-                  <Button
-                    size="lg"
-                    onClick={() => router.push("/inventory")}
-                    className="text-base px-8"
-                  >
+                  <Button size="lg" className="text-base px-8" onClick={() => router.push("/inventory")}>
                     Browse Inventory
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => router.push("/club")}
-                    className="text-base px-8"
-                  >
-                    Manage Club
-                  </Button>
+
+                  {roleBtn && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="text-base px-8"
+                      onClick={() => router.push(roleBtn.href)}
+                    >
+                      {roleBtn.label}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <>
-                  <Button
-                    size="lg"
-                    onClick={() => router.push("/signup")}
-                    className="text-base px-8"
-                  >
+                  <Button size="lg" className="text-base px-8" onClick={() => router.push("/signup")}>
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
-                    onClick={() => router.push("/login")}
                     className="text-base px-8"
+                    onClick={() => router.push("/login")}
                   >
-                    Sign In
+                    Login
                   </Button>
                 </>
               )}
@@ -96,30 +106,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24 sm:py-32">
+      {/* FEATURES */}
+      <section className="py-24 sm:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Powerful Features
-            </h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Platform Features</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to manage your club efficiently
+              Powerful tools to simplify every aspect of club and inventory management.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, index) => {
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, idx) => {
               const Icon = feature.icon;
               return (
                 <Card
-                  key={index}
-                  className="p-6 hover:shadow-lg transition-shadow duration-300 border-2 hover:border-primary/50"
+                  key={idx}
+                  className="p-6 border transition-all duration-300 hover:shadow-xl hover:border-primary/60 hover:-translate-y-1"
                 >
-                  <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10 mb-4">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
                     <Icon className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                 </Card>
               );
             })}
@@ -127,40 +136,41 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 sm:py-32 border-t">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* CTA */}
+      <section className="py-24 sm:py-32 border-t bg-gradient-to-b from-transparent to-primary/5/10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
             <Zap className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready to get started?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join clubs, manage inventory, and streamline your operations with ClubSync.
+
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Start Your Journey</h2>
+
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Whether you're a student, club lead, or faculty member—ClubSync brings
+            clarity and organization to every workflow.
           </p>
+
           {!loading && !user && (
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                onClick={() => router.push("/signup")}
-                className="text-base px-8"
-              >
+              <Button size="lg" className="text-base px-8" onClick={() => router.push("/signup")}>
                 Create Account
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => router.push("/login")}
                 className="text-base px-8"
+                onClick={() => router.push("/login")}
               >
-                Sign In
+                Login
               </Button>
             </div>
           )}
         </div>
       </section>
+
+      {/* Extra Component Section */}
+      <MenuTable />
     </div>
   );
 }

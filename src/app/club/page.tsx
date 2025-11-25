@@ -60,7 +60,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  TRANSACTION_STATUS,
+  TransactionStatusCode,
+  parseTransactionStatus,
+  getStatusLabel,
+  getStatusBadgeVariant,
+  getClubStatusActions,
+  canAdvanceStatus,
+} from "@/lib/transactionStatus";
 type TabType = "members" | "inventory" | "requests";
 
 interface Member {
@@ -90,7 +99,7 @@ interface Transaction {
   quantity: number;
   date_of_issue: string;
   due_date: string;
-  status: string;
+  status: TransactionStatusCode;
   message: string;
   name?: string;
   inventory_name?: string;
@@ -292,9 +301,10 @@ export default function ClubPage() {
 
       const formattedRequests: Transaction[] = filteredData.map((t: any) => ({
         ...t,
-        name: t.students?.name || t.clubs?.name||"-",
+        status: parseTransactionStatus(t.status),
+        name: t.students?.name || t.clubs?.name || "-",
         inventory_name: t.inventory?.name || "Unknown",
-        borrower_club_email: t.clubs?.email||"Not found",
+        borrower_club_email: t.clubs?.email || "Not found",
       }));
 
       setRequests(formattedRequests);
@@ -513,20 +523,42 @@ export default function ClubPage() {
 
   const handleRequestAction = async (
     transactionId: string,
-    status: "approved" | "rejected" | "pending"
+    nextStatus: TransactionStatusCode
   ) => {
     setUpdatingStatus(transactionId);
     try {
+      const current =
+        requests.find((req) => req.transaction_id === transactionId)?.status ??
+        (selectedTransaction?.transaction_id === transactionId
+          ? selectedTransaction.status
+          : undefined);
+
+      if (current === undefined) {
+        toast.error("Unable to find transaction details");
+        return;
+      }
+
+      if (!canAdvanceStatus(current, nextStatus)) {
+        toast.error("Status can only move forward");
+        return;
+      }
+
+      const allowedStatuses = getClubStatusActions(current);
+      if (!allowedStatuses.includes(nextStatus)) {
+        toast.error("Invalid status transition for club");
+        return;
+      }
+
       const { error } = await supabase
         .from("transactions")
-        .update({ status })
+        .update({ status: nextStatus })
         .eq("transaction_id", transactionId);
 
       if (error) throw error;
-      toast.success(`Request status updated to ${status}`);
-      fetchRequests(clubData?.club_id || "");
+      toast.success(`Request status updated to ${getStatusLabel(nextStatus)}`);
+      await fetchRequests(clubData?.club_id || "");
       if (selectedTransaction?.transaction_id === transactionId) {
-        setSelectedTransaction({ ...selectedTransaction, status });
+        setSelectedTransaction({ ...selectedTransaction, status: nextStatus });
       }
     } catch (error: any) {
       console.error("Error updating request:", error);
@@ -1152,30 +1184,44 @@ export default function ClubPage() {
                         </TableCell>
 
                         <TableCell>
-                        {updatingStatus === request.transaction_id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : request.status === "underconsideration" ? (
-                          <p className="text-sm font-medium text-muted-foreground">
-                            Pending Dept Approval
-                          </p>
-                        ) : (
-                          <Select
-                            value={request.status}
-                            onValueChange={(newStatus: "pending" | "approved" | "rejected") =>
-                              handleRequestAction(request.transaction_id, newStatus)
-                            }
-                          >
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="approved">Approved</SelectItem>
-                              <SelectItem value="rejected">Rejected</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-
+                          <div className="flex flex-col gap-2">
+                            <Badge variant={getStatusBadgeVariant(request.status)} className="w-[180px]">
+                              {getStatusLabel(request.status)}
+                            </Badge>
+                            {updatingStatus === request.transaction_id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              (() => {
+                                const options = getClubStatusActions(request.status);
+                                if (options.length === 0) {
+                                  return null;
+                                }
+                                return (
+                                  <Select
+                                    onValueChange={(value) => {
+                                      const parsed = Number(value);
+                                      if (Number.isNaN(parsed)) return;
+                                      handleRequestAction(
+                                        request.transaction_id,
+                                        parsed as TransactionStatusCode
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[180px]">
+                                      <SelectValue placeholder="Update status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {options.map((code) => (
+                                        <SelectItem key={code} value={String(code)}>
+                                          {getStatusLabel(code)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                );
+                              })()
+                            )}
+                          </div>
                         </TableCell>
                         
                         <TableCell>
@@ -1218,33 +1264,43 @@ export default function ClubPage() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                    <div className="mt-1">
-                    {updatingStatus === selectedTransaction.transaction_id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : selectedTransaction.status === "underconsideration" ? (
-                      // 🔒 Locked view (cannot modify)
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Pending Dept Approval
-                      </p>
-                    ) : (
-                      // ✅ Editable Select (for other statuses)
-                      <Select
-                        value={selectedTransaction.status}
-                        onValueChange={(newStatus: "pending" | "approved" | "rejected") =>
-                          handleRequestAction(selectedTransaction.transaction_id, newStatus)
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-
+                    <div className="mt-1 flex flex-col gap-2">
+                      <Badge variant={getStatusBadgeVariant(selectedTransaction.status)} className="w-[180px]">
+                        {getStatusLabel(selectedTransaction.status)}
+                      </Badge>
+                      {updatingStatus === selectedTransaction.transaction_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        (() => {
+                          const options = getClubStatusActions(selectedTransaction.status);
+                          if (options.length === 0) {
+                            return null;
+                          }
+                          return (
+                            <Select
+                              onValueChange={(value) => {
+                                const parsed = Number(value);
+                                if (Number.isNaN(parsed)) return;
+                                handleRequestAction(
+                                  selectedTransaction.transaction_id,
+                                  parsed as TransactionStatusCode
+                                );
+                              }}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Update status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {options.map((code) => (
+                                  <SelectItem key={code} value={String(code)}>
+                                    {getStatusLabel(code)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()
+                      )}
                     </div>
                   </div>
                   <div>
