@@ -8,7 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Users, Package, ArrowLeft, Mail,ArrowRight } from "lucide-react";
+import {
+  Users,
+  Package,
+  ArrowLeft,
+  Mail,
+  ArrowRight,
+  Loader2,
+  IndianRupee,
+  ArrowUpCircle,
+  ArrowDownCircle,
+} from "lucide-react";
+import { getFundTypeLabel } from "@/lib/fundTypeStatus";
 
 interface Club {
   club_id: string;
@@ -34,6 +45,17 @@ interface InventoryItem {
   is_public: boolean;
 }
 
+interface Fund {
+  fund_id: string;
+  name: string | null;
+  amount: number | null;
+  description: string | null;
+  is_credit: boolean;
+  type: number;
+  bill_date: string | null;
+  submitted_by_name?: string | null;
+}
+
 export default function ClubPublicPage() {
   const params = useParams();
   const router = useRouter();
@@ -45,6 +67,10 @@ export default function ClubPublicPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [funds, setFunds] = useState<Fund[]>([]);
+  const [fundsLoading, setFundsLoading] = useState(false);
+  const [fundsError, setFundsError] = useState<string | null>(null);
+  const [isMemberOfClub, setIsMemberOfClub] = useState(false);
 
   useEffect(() => {
     if (!clubId) return;
@@ -107,8 +133,82 @@ export default function ClubPublicPage() {
     fetchData();
   }, [clubId]);
 
+  useEffect(() => {
+    if (!user?.user_id) {
+      setIsMemberOfClub(false);
+      return;
+    }
+
+    setIsMemberOfClub(members.some((member) => member.usn === user.user_id));
+  }, [members, user]);
+
   const isClubEmailEditor =
     !!club && !!user && user.role === "club" && user.user_id === club.club_id && user.email === club.email;
+
+  const canViewFunds = isClubEmailEditor || isMemberOfClub;
+
+  useEffect(() => {
+    if (!clubId || !canViewFunds) return;
+
+    const fetchFunds = async () => {
+      try {
+        setFundsLoading(true);
+        setFundsError(null);
+
+        const { data, error } = await supabase
+          .from("funds")
+          .select(
+            `
+            fund_id,
+            name,
+            amount,
+            description,
+            is_credit,
+            type,
+            bill_date,
+            submitted_by,
+            submitted_by_member:submitted_by (
+              usn,
+              students:usn (
+                name
+              )
+            )
+          `
+          )
+          .eq("club_id", clubId)
+          .eq("is_trashed", false)
+          .order("bill_date", { ascending: false, nullsFirst: false });
+
+        if (error) throw error;
+
+        const formattedFunds: Fund[] =
+          data?.map((fund: any) => ({
+            ...fund,
+            submitted_by_name: fund.submitted_by_member?.students?.name || fund.submitted_by_member?.usn || "Unknown",
+          })) || [];
+
+        setFunds(formattedFunds);
+      } catch (err: any) {
+        console.error("Error fetching funds:", err);
+        setFundsError("Failed to load funds for this club.");
+      } finally {
+        setFundsLoading(false);
+      }
+    };
+
+    fetchFunds();
+  }, [clubId, canViewFunds]);
+
+  const formatCurrency = (value?: number | null) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(value ?? 0);
+
+  const totalIncome = funds.filter((fund) => fund.is_credit).reduce((sum, fund) => sum + (fund.amount || 0), 0);
+  const totalExpense = funds.filter((fund) => !fund.is_credit).reduce((sum, fund) => sum + (fund.amount || 0), 0);
+  const netBalance = totalIncome - totalExpense;
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -260,6 +360,107 @@ export default function ClubPublicPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {canViewFunds && (
+              <Card>
+                <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <IndianRupee className="h-5 w-5 text-primary" />
+                      Funds Overview
+                    </CardTitle>
+                    <CardDescription>
+                      Detailed fund records are visible only to club members and club administrators.
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="self-start">
+                    Members Only
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  {fundsLoading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading funds...</span>
+                    </div>
+                  ) : fundsError ? (
+                    <p className="text-sm text-red-500">{fundsError}</p>
+                  ) : funds.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No funds have been recorded for this club yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs uppercase text-muted-foreground">Total Income</p>
+                          <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalIncome)}</p>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs uppercase text-muted-foreground">Total Expenditure</p>
+                          <p className="text-2xl font-semibold text-red-600">{formatCurrency(totalExpense)}</p>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs uppercase text-muted-foreground">Net Balance</p>
+                          <p className={`text-2xl font-semibold ${netBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {formatCurrency(netBalance)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Transaction</TableHead>
+                              <TableHead>Bill Date</TableHead>
+                              <TableHead>Submitted By</TableHead>
+                              <TableHead>Description</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {funds.map((fund) => (
+                              <TableRow key={fund.fund_id}>
+                                <TableCell className="font-medium">{fund.name || "-"}</TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">{getFundTypeLabel(fund.type)}</Badge>
+                                </TableCell>
+                                <TableCell className="font-semibold">{formatCurrency(fund.amount)}</TableCell>
+                                <TableCell>
+                                  {fund.is_credit ? (
+                                    <Badge variant="default" className="bg-green-600 text-white">
+                                      <ArrowUpCircle className="h-3 w-3 mr-1" />
+                                      Credit
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="default" className="bg-red-600 text-white">
+                                      <ArrowDownCircle className="h-3 w-3 mr-1" />
+                                      Debit
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {fund.bill_date ? new Date(fund.bill_date).toLocaleDateString() : "-"}
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {fund.submitted_by_name || "-"}
+                                </TableCell>
+                                <TableCell className="max-w-[240px]">
+                                  <p className="text-sm text-muted-foreground line-clamp-3">
+                                    {fund.description || "-"}
+                                  </p>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
