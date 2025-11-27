@@ -41,7 +41,7 @@ export default function Home() {
   const roleButtons = {
     club: { label: "Manage Club", href: "/club" },
     student: { label: "Student Dashboard", href: "/student" },
-    faculty: { label: "Faculty Dashboard", href: "/faculty" },
+    faculty: { label: "Department", href: "/department" },
   };
 
   const roleBtn = user?.role ? roleButtons[user.role] : null;

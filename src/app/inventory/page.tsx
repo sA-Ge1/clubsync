@@ -334,7 +334,7 @@ export default function InventoryPage() {
                         e.currentTarget.src = "/placeholder.png"; // fallback if invalid
                       }}
                       alt="Inventory Image"
-                      className="w-full h-[250px] object-cover rounded-md border-2 border-ring"
+                      className="w-full h-[250px] object-contain rounded-md"
                     />
                   <p className="text-sm text-muted-foreground mb-4 flex-1">
                     {item.description || "No description"}

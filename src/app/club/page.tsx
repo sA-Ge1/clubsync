@@ -41,6 +41,7 @@ import {
   Search,
   ArrowUpDown,
   Info,
+  IndianRupee,
 } from "lucide-react";
 import {
   Select,
@@ -70,7 +71,18 @@ import {
   getClubStatusActions,
   canAdvanceStatus,
 } from "@/lib/transactionStatus";
-type TabType = "members" | "inventory" | "requests";
+import {
+  FUND_TYPE,
+  FUND_TYPE_LABELS,
+  EXPENDITURE_TYPES,
+  INCOME_TYPES,
+  getFundTypeLabel,
+  isExpenditure,
+  isIncome,
+  FundTypeCode,
+} from "@/lib/fundTypeStatus";
+import { DollarSign, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+type TabType = "members" | "inventory" | "requests" | "funds";
 
 interface Member {
   member_id: string;
@@ -115,6 +127,20 @@ interface StudentInfo {
   department_name?: string;
 }
 
+interface Fund {
+  fund_id: string;
+  amount: number;
+  description: string | null;
+  club_id: string;
+  is_credit: boolean;
+  type: number;
+  bill_date: string | null;
+  name: string | null;
+  submitted_by: string | null;
+  is_trashed: boolean;
+  submitted_by_name?: string;
+}
+
 
 export default function ClubPage() {
   const { user, loading: userLoading } = useUserInfo();
@@ -125,6 +151,7 @@ export default function ClubPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [requests, setRequests] = useState<Transaction[]>([]);
+  const [funds, setFunds] = useState<Fund[]>([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // Member management states
@@ -161,6 +188,39 @@ export default function ClubPage() {
   const [editingMessage, setEditingMessage] = useState("");
   const [isSavingMessage, setIsSavingMessage] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  // Requests filter/sort states
+  const [requestSearchQuery, setRequestSearchQuery] = useState("");
+  const [requestStatusFilter, setRequestStatusFilter] = useState<
+    TransactionStatusCode | "all"
+  >("all");
+  const [requestSortBy, setRequestSortBy] = useState<"date" | "status">("date");
+  
+  // Funds management states
+  const [fundsDialogOpen, setFundsDialogOpen] = useState(false);
+  const [editingFund, setEditingFund] = useState<Fund | null>(null);
+  const [fundForm, setFundForm] = useState<{
+    name: string;
+    amount: number;
+    description: string;
+    is_credit: boolean;
+    type: FundTypeCode;
+    bill_date: string;
+    submitted_by_usn: string;
+  }>({
+    name: "",
+    amount: 0,
+    description: "",
+    is_credit: false,
+    type: FUND_TYPE.ADMINISTRATIVE,
+    bill_date: "",
+    submitted_by_usn: "",
+  });
+  const [isSavingFund, setIsSavingFund] = useState(false);
+  const [isDeletingFund, setIsDeletingFund] = useState<string | null>(null);
+  const [fundSearchQuery, setFundSearchQuery] = useState("");
+  const [fundTypeFilter, setFundTypeFilter] = useState<"all" | "expenditure" | "income">("all");
+  const [fundCreditFilter, setFundCreditFilter] = useState<"all" | "credit" | "debit">("all");
+
   useEffect(() => {
     if (userLoading) return;
 
@@ -216,6 +276,8 @@ export default function ClubPage() {
       await fetchInventory(club.club_id);
       // Fetch requests
       await fetchRequests(club.club_id);
+      // Fetch funds
+      await fetchFunds(club.club_id);
     } catch (error) {
       console.error("Error fetching club data:", error);
       toast.error("An error occurred");
@@ -311,6 +373,37 @@ export default function ClubPage() {
     } catch (error) {
       console.error("Error fetching requests:", error);
       toast.error("Failed to fetch requests");
+    }
+  };
+
+  const fetchFunds = async (clubId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("funds")
+        .select(`
+          *,
+          memberships:submitted_by (
+            usn,
+            students:usn (
+              name
+            )
+          )
+        `)
+        .eq("club_id", clubId)
+        .eq("is_trashed", false)
+        .order("bill_date", { ascending: false, nullsFirst: false });
+
+      if (error) throw error;
+
+      const formattedFunds: Fund[] = (data || []).map((f: any) => ({
+        ...f,
+        submitted_by_name: f.memberships?.students?.name || "Unknown",
+      }));
+
+      setFunds(formattedFunds);
+    } catch (error) {
+      console.error("Error fetching funds:", error);
+      toast.error("Failed to fetch funds");
     }
   };
 
@@ -448,6 +541,39 @@ export default function ClubPage() {
         // If same role, sort by name
         return a.name.localeCompare(b.name);
       }
+    });
+
+  // Filter and sort requests
+  const filteredAndSortedRequests = requests
+    .filter((request) => {
+      // Status filter
+      if (requestStatusFilter !== "all" && request.status !== requestStatusFilter) {
+        return false;
+      }
+
+      // Search by borrower name or item name
+      if (!requestSearchQuery.trim()) return true;
+      const query = requestSearchQuery.toLowerCase().trim();
+      const borrowerName = (request.name || "").toLowerCase();
+      const itemName = (request.inventory_name || "").toLowerCase();
+
+      return borrowerName.includes(query) || itemName.includes(query);
+    })
+    .sort((a, b) => {
+      if (requestSortBy === "status") {
+        if (a.status !== b.status) {
+          return a.status - b.status;
+        }
+        // If same status, keep most recent first
+        return (
+          new Date(b.date_of_issue).getTime() - new Date(a.date_of_issue).getTime()
+        );
+      }
+
+      // Default: sort by most recent request date
+      return (
+        new Date(b.date_of_issue).getTime() - new Date(a.date_of_issue).getTime()
+      );
     });
 
   const handleSaveInventory = async () => {
@@ -663,6 +789,188 @@ export default function ClubPage() {
     setInventoryDialogOpen(true);
   };
 
+  const openFundDialog = async (fund?: Fund) => {
+    if (fund) {
+      setEditingFund(fund);
+      // Get the USN from the submitted_by member_id
+      let submittedUsn = "";
+      if (fund.submitted_by) {
+        try {
+          const { data, error } = await supabase
+            .from("memberships")
+            .select("usn")
+            .eq("member_id", fund.submitted_by)
+            .single();
+          
+          if (!error && data) {
+            submittedUsn = data.usn || "";
+          }
+        } catch (error) {
+          console.error("Error fetching USN:", error);
+        }
+      }
+      setFundForm({
+        name: fund.name || "",
+        amount: fund.amount || 0,
+        description: fund.description || "",
+        is_credit: fund.is_credit,
+        type: fund.type as FundTypeCode,
+        bill_date: fund.bill_date || "",
+        submitted_by_usn: submittedUsn,
+      });
+    } else {
+      setEditingFund(null);
+      setFundForm({
+        name: "",
+        amount: 0,
+        description: "",
+        is_credit: false,
+        type: FUND_TYPE.ADMINISTRATIVE,
+        bill_date: "",
+        submitted_by_usn: "",
+      });
+    }
+    setFundsDialogOpen(true);
+  };
+
+  const handleSaveFund = async () => {
+    if (!fundForm.name.trim() || !clubData || fundForm.amount <= 0) {
+      toast.error("Please fill in all required fields and ensure amount is greater than 0");
+      return;
+    }
+
+    if (!fundForm.submitted_by_usn.trim()) {
+      toast.error("Please enter the student USN");
+      return;
+    }
+
+    setIsSavingFund(true);
+    try {
+      // Get member_id from USN and club_id
+      const { data: membership, error: membershipError } = await supabase
+        .from("memberships")
+        .select("member_id")
+        .eq("club_id", clubData.club_id)
+        .eq("usn", fundForm.submitted_by_usn.trim().toUpperCase())
+        .single();
+
+      if (membershipError || !membership) {
+        toast.error("Student USN not found in club members. Please check the USN.");
+        setIsSavingFund(false);
+        return;
+      }
+
+      if (editingFund) {
+        // Update existing
+        const { error } = await supabase
+          .from("funds")
+          .update({
+            name: fundForm.name,
+            amount: fundForm.amount,
+            description: fundForm.description || null,
+            is_credit: fundForm.is_credit,
+            type: fundForm.type,
+            bill_date: fundForm.bill_date || null,
+            submitted_by: membership.member_id,
+          })
+          .eq("fund_id", editingFund.fund_id);
+
+        if (error) throw error;
+        toast.success("Fund updated successfully");
+      } else {
+        // Create new
+        const { error } = await supabase.from("funds").insert({
+          club_id: clubData.club_id,
+          name: fundForm.name,
+          amount: fundForm.amount,
+          description: fundForm.description || null,
+          is_credit: fundForm.is_credit,
+          type: fundForm.type,
+          bill_date: fundForm.bill_date || null,
+          submitted_by: membership.member_id,
+          is_trashed: false,
+        });
+
+        if (error) throw error;
+        toast.success("Fund added successfully");
+      }
+
+      setFundsDialogOpen(false);
+      setEditingFund(null);
+      setFundForm({
+        name: "",
+        amount: 0,
+        description: "",
+        is_credit: false,
+        type: FUND_TYPE.ADMINISTRATIVE,
+        bill_date: "",
+        submitted_by_usn: "",
+      });
+      fetchFunds(clubData.club_id);
+    } catch (error: any) {
+      console.error("Error saving fund:", error);
+      toast.error(error.message || "Failed to save fund");
+    }
+    setIsSavingFund(false);
+  };
+
+  const handleDeleteFund = async (fundId: string) => {
+    setIsDeletingFund(fundId);
+    try {
+      const { error } = await supabase
+        .from("funds")
+        .update({ is_trashed: true })
+        .eq("fund_id", fundId);
+
+      if (error) throw error;
+      toast.success("Fund deleted successfully");
+      fetchFunds(clubData?.club_id || "");
+    } catch (error: any) {
+      console.error("Error deleting fund:", error);
+      toast.error(error.message || "Failed to delete fund");
+    }
+    setIsDeletingFund(null);
+  };
+
+  // Filter and sort funds
+  const filteredAndSortedFunds = funds
+    .filter((fund) => {
+      // Type filter
+      if (fundTypeFilter === "expenditure" && !isExpenditure(fund.type)) {
+        return false;
+      }
+      if (fundTypeFilter === "income" && !isIncome(fund.type)) {
+        return false;
+      }
+
+      // Credit/Debit filter
+      if (fundCreditFilter === "credit" && !fund.is_credit) {
+        return false;
+      }
+      if (fundCreditFilter === "debit" && fund.is_credit) {
+        return false;
+      }
+
+      // Search filter
+      if (!fundSearchQuery.trim()) return true;
+      const query = fundSearchQuery.toLowerCase().trim();
+      const submittedLabel=(fund.submitted_by_name || "").toLowerCase();
+      const name = (fund.name || "").toLowerCase();
+      const description = (fund.description || "").toLowerCase();
+      const typeLabel = getFundTypeLabel(fund.type).toLowerCase();
+
+      return name.includes(query) || description.includes(query) || typeLabel.includes(query) || submittedLabel.includes(query)
+    })
+    .sort((a, b) => {
+      // Sort by bill_date (most recent first), then by amount
+      if (a.bill_date && b.bill_date) {
+        return new Date(b.bill_date).getTime() - new Date(a.bill_date).getTime();
+      }
+      if (a.bill_date) return -1;
+      if (b.bill_date) return 1;
+      return b.amount - a.amount;
+    });
+
   if (userLoading || clubLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -721,6 +1029,17 @@ export default function ClubPage() {
           >
             <FileCheck className="inline-block mr-2 h-4 w-4" />
             Requests
+          </button>
+          <button
+            onClick={() => setActiveTab("funds")}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === "funds"
+                ? "border-b-2 border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IndianRupee className="inline-block mr-2 h-4 w-4" />
+            Funds
           </button>
         </div>
 
@@ -1143,6 +1462,82 @@ export default function ClubPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Request filters */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by borrower or item name..."
+                    value={requestSearchQuery}
+                    onChange={(e) => setRequestSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Select
+                    value={requestStatusFilter === "all" ? "all" : String(requestStatusFilter)}
+                    onValueChange={(value) => {
+                      if (value === "all") {
+                        setRequestStatusFilter("all");
+                        return;
+                      }
+                      const parsed = Number(value);
+                      if (!Number.isNaN(parsed)) {
+                        setRequestStatusFilter(parsed as TransactionStatusCode);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.PROCESSING)}>
+                        {getStatusLabel(TRANSACTION_STATUS.PROCESSING)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.DEPARTMENT_PENDING)}>
+                        {getStatusLabel(TRANSACTION_STATUS.DEPARTMENT_PENDING)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.DEPARTMENT_APPROVED)}>
+                        {getStatusLabel(TRANSACTION_STATUS.DEPARTMENT_APPROVED)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.DEPARTMENT_REJECTED)}>
+                        {getStatusLabel(TRANSACTION_STATUS.DEPARTMENT_REJECTED)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.CLUB_APPROVED)}>
+                        {getStatusLabel(TRANSACTION_STATUS.CLUB_APPROVED)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.CLUB_REJECTED)}>
+                        {getStatusLabel(TRANSACTION_STATUS.CLUB_REJECTED)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.COLLECTED)}>
+                        {getStatusLabel(TRANSACTION_STATUS.COLLECTED)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.OVERDUE)}>
+                        {getStatusLabel(TRANSACTION_STATUS.OVERDUE)}
+                      </SelectItem>
+                      <SelectItem value={String(TRANSACTION_STATUS.RETURNED)}>
+                        {getStatusLabel(TRANSACTION_STATUS.RETURNED)}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={requestSortBy}
+                    onValueChange={(value: "date" | "status") => setRequestSortBy(value)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <ArrowUpDown className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Sort by Latest</SelectItem>
+                      <SelectItem value="status">Sort by Status</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1157,14 +1552,16 @@ export default function ClubPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.length === 0 ? (
+                  {filteredAndSortedRequests.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        No requests yet
+                        {requests.length === 0
+                          ? "No requests yet"
+                          : "No requests match the current filters"}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    requests.map((request) => (
+                    filteredAndSortedRequests.map((request) => (
                       <TableRow key={request.transaction_id}>
                         <TableCell>{request.name}</TableCell>
                         <TableCell>{request.inventory_name}</TableCell>
@@ -1233,6 +1630,382 @@ export default function ClubPage() {
                             >
                               <Info className="h-4 w-4" />
                             </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Funds Tab */}
+        {activeTab === "funds" && (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center gap-5">
+                <div>
+                  <CardTitle>Funds Management</CardTitle>
+                  <CardDescription className="mt-2">
+                    Manage your club's income and expenditure records.
+                  </CardDescription>
+                </div>
+                <Dialog open={fundsDialogOpen} onOpenChange={setFundsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => openFundDialog()}>
+                      <Plus className="h-4 w-4" />
+                      New Fund
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingFund ? "Edit Fund" : "Add New Fund"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div>
+                        <Label htmlFor="fund-name" className="p-2">Name *</Label>
+                        <Input
+                          id="fund-name"
+                          value={fundForm.name}
+                          onChange={(e) =>
+                            setFundForm({ ...fundForm, name: e.target.value })
+                          }
+                          placeholder="Enter fund name"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="fund-amount" className="p-2">Amount *</Label>
+                          <Input
+                            id="fund-amount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={fundForm.amount}
+                            onChange={(e) =>
+                              setFundForm({
+                                ...fundForm,
+                                amount: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="fund-bill-date" className="p-2">Bill Date</Label>
+                          <Input
+                            id="fund-bill-date"
+                            className="text-foreground"
+                            type="date"
+                            value={fundForm.bill_date}
+                            onChange={(e) =>
+                              setFundForm({ ...fundForm, bill_date: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="fund-type" className="p-2">Type *</Label>
+                        <Select
+                          value={String(fundForm.type)}
+                          onValueChange={(value) => {
+                            const parsed = parseInt(value);
+                            const credit = isIncome(parsed);
+
+                            setFundForm((prev) => ({
+                              ...prev,
+                              type: parsed as FundTypeCode,
+                              is_credit: credit,
+                            }));
+                          }}
+                        >
+
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select fund type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EXPENDITURE_TYPES.map((type) => (
+                              <SelectItem key={type} value={String(type)}>
+                                {getFundTypeLabel(type)} (Expenditure)
+                              </SelectItem>
+                            ))}
+                            {INCOME_TYPES.map((type) => (
+                              <SelectItem key={type} value={String(type)}>
+                                {getFundTypeLabel(type)} (Income)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="fund-description" className="p-2">Description</Label>
+                        <Textarea
+                          id="fund-description"
+                          value={fundForm.description}
+                          onChange={(e) =>
+                            setFundForm({ ...fundForm, description: e.target.value })
+                          }
+                          placeholder="Enter description (optional)"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="fund-submitted-by-usn" className="p-2">Submitted By (USN) *</Label>
+                        <Input
+                          id="fund-submitted-by-usn"
+                          value={fundForm.submitted_by_usn}
+                          onChange={(e) =>
+                            setFundForm({ ...fundForm, submitted_by_usn: e.target.value.toUpperCase() })
+                          }
+                          placeholder="Enter student USN"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="fund-is-credit"
+                          checked={fundForm.is_credit}
+                        />
+                        <Label htmlFor="fund-is-credit">
+                          {fundForm.is_credit ? (
+                            <span className="flex items-center gap-1 text-green-600">
+                              <ArrowUpCircle className="h-4 w-4" />
+                              Credit (Income)
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-white">
+                              <ArrowDownCircle className="h-4 w-4" />
+                              Debit (Expenditure)
+                            </span>
+                          )}
+                        </Label>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setFundsDialogOpen(false)}
+                        disabled={isSavingFund}
+                      >
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSaveFund} disabled={isSavingFund}>
+                        {isSavingFund ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filters */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, description,submitted by or type..."
+                    value={fundSearchQuery}
+                    onChange={(e) => setFundSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Select
+                    value={fundTypeFilter}
+                    onValueChange={(value: "all" | "expenditure" | "income") =>
+                      setFundTypeFilter(value)
+                    }
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="expenditure">Expenditure</SelectItem>
+                      <SelectItem value="income">Income</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={fundCreditFilter}
+                    onValueChange={(value: "all" | "credit" | "debit") =>
+                      setFundCreditFilter(value)
+                    }
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by transaction" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Transactions</SelectItem>
+                      <SelectItem value="credit">Credit (Income)</SelectItem>
+                      <SelectItem value="debit">Debit (Expenditure)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Total Income</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      ₹{funds
+                        .filter((f) => f.is_credit)
+                        .reduce((sum, f) => sum + (f.amount || 0), 0)
+                        .toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Total Expenditure</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      ₹{funds
+                        .filter((f) => !f.is_credit)
+                        .reduce((sum, f) => sum + (f.amount || 0), 0)
+                        .toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Net Balance</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className={`text-2xl font-bold ${
+                        funds.reduce(
+                          (sum, f) => sum + (f.is_credit ? f.amount : -f.amount || 0),
+                          0
+                        ) >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      ₹{funds
+                        .reduce(
+                          (sum, f) => sum + (f.is_credit ? f.amount : -f.amount || 0),
+                          0
+                        )
+                        .toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Transaction</TableHead>
+                    <TableHead>Bill Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Submitted By</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedFunds.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        {funds.length === 0
+                          ? "No funds yet"
+                          : "No funds match the current filters"}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredAndSortedFunds.map((fund) => (
+                      <TableRow key={fund.fund_id}>
+                        <TableCell className="font-medium">{fund.name || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getFundTypeLabel(fund.type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          ₹{fund.amount?.toFixed(2) || "0.00"}
+                        </TableCell>
+                        <TableCell>
+                          {fund.is_credit ? (
+                            <Badge variant="default" className="bg-green-600 text-white">
+                              <ArrowUpCircle className="h-3 w-3 mr-1" />
+                              Credit
+                            </Badge>
+                          ) : (
+                            <Badge variant="default" className="bg-red-600 text-white">
+                              <ArrowDownCircle className="h-3 w-3 mr-1" />
+                              Debit
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {fund.bill_date
+                            ? new Date(fund.bill_date).toLocaleDateString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <p className="max-w-[200px] truncate">
+                            {fund.description || "-"}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {fund.submitted_by_name || "Unknown"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => openFundDialog(fund)}
+                              className="bg-background/70 text-foreground hover:text-background"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="bg-background/70 text-red-500 hover:bg-red-500 hover:text-white"
+                                  disabled={isDeletingFund === fund.fund_id}
+                                >
+                                  {isDeletingFund === fund.fund_id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action will soft delete the fund (mark as trashed). It can be restored later if needed.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteFund(fund.fund_id)}
+                                  >
+                                    Continue
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>

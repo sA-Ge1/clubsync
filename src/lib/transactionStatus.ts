@@ -118,7 +118,10 @@ export const getClubStatusActions = (
   }
 
   if (status === TRANSACTION_STATUS.COLLECTED) {
-    return [TRANSACTION_STATUS.RETURNED];
+    return [TRANSACTION_STATUS.RETURNED,
+      TRANSACTION_STATUS.OVERDUE
+    ];
+
   }
 
   if (status === TRANSACTION_STATUS.OVERDUE) {

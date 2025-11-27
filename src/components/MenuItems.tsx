@@ -7,10 +7,10 @@ import { ArrowRight } from "lucide-react";
 const menuItems = [
   { name: "Home", href: "/", description: "Back to the main page" },
   { name: "Student", href: "/student", description: "Visit student dasboard(for students)" },
-  { name: "Club", href: "/club", description: "Visit club dasboard(for clubs)" },
+  { name: "Clubs", href: "/clubs", description: "Visit all clubs and view info." },
   { name: "Inventory", href: "/inventory", description: "Check out the inventory present" },
   { name: "Sign Up", href: "/signup", description: "Create your account" },
-  { name: "Department", href: "/department", description: "Visit club dasboard(for faculty)" },
+  { name: "Departments", href: "/departments", description: "View departments and faculty members" },
   { name: "Features", href: "/#features", description: "Explore all features" },
   { name: "Support", href: "/support", description: "Get help" },
   { name: "Contact", href: "/contact", description: "Get in touch with devs" },

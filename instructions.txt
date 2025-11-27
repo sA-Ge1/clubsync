@@ -8,3 +8,142 @@ status codes:
 6-collected
 7-overdue
 8-returned
+
+
+funds.type code-
+expenditure-
+
+0-Administrative
+1-Event
+2-Promotional
+3-Equipment
+4-Training
+5-Miscellaneous
+
+
+Income-
+
+6-college
+7-sponsors
+8-Workshops
+10-Members contribution
+11-Services
+
+
+
+db description
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.auth (
+  email character varying NOT NULL UNIQUE,
+  role text NOT NULL DEFAULT 'notset'::text,
+  student_id text,
+  faculty_id text,
+  club_id uuid,
+  id uuid NOT NULL UNIQUE,
+  CONSTRAINT auth_pkey PRIMARY KEY (id),
+  CONSTRAINT auth_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(usn),
+  CONSTRAINT auth_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES public.faculty(faculty_id),
+  CONSTRAINT auth_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
+  CONSTRAINT auth_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(club_id)
+);
+CREATE TABLE public.clubs (
+  club_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  technical boolean,
+  description text,
+  faculty_id text,
+  email text UNIQUE,
+  CONSTRAINT clubs_pkey PRIMARY KEY (club_id),
+  CONSTRAINT clubs_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES public.faculty(faculty_id)
+);
+CREATE TABLE public.department_requests (
+  request_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  dept_id uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  usn text,
+  transaction_id uuid,
+  CONSTRAINT department_requests_pkey PRIMARY KEY (request_id),
+  CONSTRAINT department_requests_dept_id_fkey FOREIGN KEY (dept_id) REFERENCES public.departments(dept_id),
+  CONSTRAINT department_requests_usn_fkey FOREIGN KEY (usn) REFERENCES public.students(usn),
+  CONSTRAINT department_requests_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(transaction_id)
+);
+CREATE TABLE public.departments (
+  dept_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  hod text,
+  description text,
+  CONSTRAINT departments_pkey PRIMARY KEY (dept_id),
+  CONSTRAINT departments_hod_fkey FOREIGN KEY (hod) REFERENCES public.faculty(faculty_id)
+);
+CREATE TABLE public.faculty (
+  faculty_id text NOT NULL,
+  name text NOT NULL,
+  email text UNIQUE,
+  dept_id uuid,
+  CONSTRAINT faculty_pkey PRIMARY KEY (faculty_id),
+  CONSTRAINT faculty_dept_id_fkey FOREIGN KEY (dept_id) REFERENCES public.departments(dept_id)
+);
+create table public.funds (
+  fund_id uuid not null default gen_random_uuid (),
+  amount numeric(10, 2) null,
+  description text null,
+  club_id uuid null,
+  is_credit boolean null,
+  type smallint null default '0'::smallint,
+  bill_date date null,
+  name text null,
+  is_trashed boolean null default false,
+  submited_by text null,
+  constraint funds_pkey primary key (fund_id),
+  constraint funds_club_id_fkey foreign KEY (club_id) references clubs (club_id) on delete set null,
+  constraint funds_submited_by_fkey foreign KEY (submited_by) references students (usn) on update RESTRICT on delete set null
+) TABLESPACE pg_default;
+
+CREATE TABLE public.inventory (
+  inventory_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  club_id uuid,
+  name text NOT NULL,
+  description text,
+  quantity integer DEFAULT 0 CHECK (quantity >= 0),
+  cost numeric,
+  image text,
+  is_public boolean NOT NULL DEFAULT true,
+  CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id),
+  CONSTRAINT inventory_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(club_id)
+);
+CREATE TABLE public.memberships (
+  member_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  usn text,
+  club_id uuid,
+  role text,
+  CONSTRAINT memberships_pkey PRIMARY KEY (member_id),
+  CONSTRAINT memberships_usn_fkey FOREIGN KEY (usn) REFERENCES public.students(usn),
+  CONSTRAINT memberships_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(club_id)
+);
+CREATE TABLE public.students (
+  usn text NOT NULL,
+  name text NOT NULL,
+  email text NOT NULL UNIQUE,
+  semester integer CHECK (semester >= 1 AND semester <= 8),
+  dept_id uuid,
+  CONSTRAINT students_pkey PRIMARY KEY (usn),
+  CONSTRAINT students_dept_id_fkey FOREIGN KEY (dept_id) REFERENCES public.departments(dept_id)
+);
+CREATE TABLE public.transactions (
+  transaction_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id text,
+  borrower_club_id uuid,
+  inventory_id uuid,
+  quantity integer CHECK (quantity > 0),
+  date_of_issue timestamp without time zone DEFAULT now(),
+  due_date timestamp without time zone,
+  message text,
+  updated_at timestamp without time zone DEFAULT now(),
+  status smallint DEFAULT '0'::smallint,
+  CONSTRAINT transactions_pkey PRIMARY KEY (transaction_id),
+  CONSTRAINT transactions_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(usn),
+  CONSTRAINT transactions_inventory_id_fkey FOREIGN KEY (inventory_id) REFERENCES public.inventory(inventory_id),
+  CONSTRAINT transactions_borrower_club_id_fkey FOREIGN KEY (borrower_club_id) REFERENCES public.clubs(club_id)
+);

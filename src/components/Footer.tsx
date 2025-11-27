@@ -10,7 +10,7 @@ const Footer = () => {
     { name: 'Inventory', href: '/inventory' },
     { name: 'Clubs', href: '/clubs' },
     { name: 'Student', href: '/student' },
-    { name: 'Department', href: '/department' },
+    { name: 'Departments', href: '/departments' },
     { name: 'Login', href: '/login' },
     { name: 'Sign-up', href: '/signup' },
     { name: 'Contact', href: '/contact' },
