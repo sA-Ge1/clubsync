@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const queryClient = new QueryClient();
 import { UserProvider } from '@/hooks/useUserInfo';
+
 export default function ClientProviders({
   children,
 }: {

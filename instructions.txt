@@ -1,13 +1,63 @@
-status codes:
-0-processing
-1-department approval pending
-2-department rejected
-3-department approved 
-4-club rejected
-5-club approved
-6-collected
-7-overdue
-8-returned
+Transaction State Machine and Allowed Transitions
+
+Context:
+transactions.status represents the lifecycle of an inventory borrowing transaction.
+
+Status codes:
+0 = PROCESSING
+1 = DEPARTMENT APPROVAL PENDING
+2 = DEPARTMENT REJECTED (terminal)
+3 = DEPARTMENT APPROVED
+4 = CLUB REJECTED (terminal)
+5 = CLUB APPROVED
+6 = COLLECTED
+7 = OVERDUE
+8 = RETURNED (terminal)
+
+Department vs direct club flow:
+- If the borrower is a student who belongs to the club that owns the inventory, or if the transaction is initiated by another club, the request can move directly from PROCESSING (0) to a club decision (4 or 5). Department approval is not required.
+- If the borrower is a student who does NOT belong to the lending club, the request must go through department review before the club decision.
+
+Allowed transitions:
+
+From 0 (PROCESSING):
+- To 1 (DEPARTMENT APPROVAL PENDING) when department approval is required.
+- To 4 (CLUB REJECTED) when club directly rejects a same-club or club-to-club request.
+- To 5 (CLUB APPROVED) when club directly approves a same-club or club-to-club request.
+
+From 1 (DEPARTMENT APPROVAL PENDING):
+- To 2 (DEPARTMENT REJECTED) if department rejects the request. This is terminal.
+- To 3 (DEPARTMENT APPROVED) if department approves the request.
+
+From 2 (DEPARTMENT REJECTED):
+- No further transitions. This is a terminal cancelled state.
+
+From 3 (DEPARTMENT APPROVED):
+- To 4 (CLUB REJECTED) if club rejects after department approval. Terminal.
+- To 5 (CLUB APPROVED) if club approves after department approval.
+
+From 4 (CLUB REJECTED):
+- No further transitions. This is a terminal cancelled state.
+
+From 5 (CLUB APPROVED):
+- To 6 (COLLECTED) once the borrower collects the item.
+- Direct transitions to 7 or 8 are not allowed; collection must happen first.
+
+From 6 (COLLECTED):
+- To 7 (OVERDUE) if due_date has passed and item is not returned.
+- To 8 (RETURNED) when the item is returned on or before due date.
+
+From 7 (OVERDUE):
+- To 8 (RETURNED) when an overdue item is finally returned.
+
+From 8 (RETURNED):
+- No further transitions. This is a terminal success state.
+
+Global rules:
+- No backward transitions are allowed (statuses cannot go to a lower code just to "undo" a decision).
+- Once a transaction is in status 2 (DEPARTMENT REJECTED) or 4 (CLUB REJECTED), it is cancelled and cannot be approved or collected.
+- Once status reaches 8 (RETURNED), the transaction is fully closed.
+
 
 
 funds.type code-

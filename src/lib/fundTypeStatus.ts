@@ -10,15 +10,14 @@ export const FUND_TYPE = {
   EQUIPMENT: 3,
   TRAINING: 4,
   MISCELLANEOUS: 5,
+  OTHER_EXP:6,
   // Income
-  COLLEGE: 6,
-  SPONSORS: 7,
-  WORKSHOPS: 8,
+  COLLEGE: 7,
+  SPONSORS: 8,
+  WORKSHOPS: 9,
   MEMBERS_CONTRIBUTION: 10,
   SERVICES: 11,
-  //Other
-  OTHER_EXP:12,
-  OTHER_INC:13
+  OTHER_INC:12
 } as const;
 
 export type FundTypeCode = typeof FUND_TYPE[keyof typeof FUND_TYPE];
@@ -30,12 +29,13 @@ export const FUND_TYPE_LABELS: Record<FundTypeCode, string> = {
   [FUND_TYPE.EQUIPMENT]: "Equipment",
   [FUND_TYPE.TRAINING]: "Training",
   [FUND_TYPE.MISCELLANEOUS]: "Miscellaneous",
+  [FUND_TYPE.OTHER_EXP]:"Other",
+  
   [FUND_TYPE.COLLEGE]: "College",
   [FUND_TYPE.SPONSORS]: "Sponsors",
   [FUND_TYPE.WORKSHOPS]: "Workshops",
   [FUND_TYPE.MEMBERS_CONTRIBUTION]: "Members Contribution",
   [FUND_TYPE.SERVICES]: "Services",
-  [FUND_TYPE.OTHER_EXP]:"Other",
   [FUND_TYPE.OTHER_INC]:"Other",
 };
 

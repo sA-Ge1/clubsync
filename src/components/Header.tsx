@@ -26,6 +26,7 @@ const navItems = [
   { label: "Inventory", path: "/inventory" },
   { label: "Clubs", path: "/clubs" },
   { label: "Departments", path: "/departments" },
+  { label: "AI Chat", path: "/chat" },
 ];
 
 const Header = () => {

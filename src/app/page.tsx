@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, Package, FileCheck, Shield, Zap, ArrowRight } from "lucide-react";
 import MenuTable from "@/components/MenuItems";
-
+import { getRelevantChunks } from "@/lib/rag";
 export default function Home() {
   const { user, loading } = useUserInfo();
   const router = useRouter();
@@ -135,6 +135,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <MenuTable />
 
       {/* CTA */}
       <section className="py-24 sm:py-32 border-t bg-gradient-to-b from-transparent to-primary/5/10">
@@ -170,7 +171,7 @@ export default function Home() {
       </section>
 
       {/* Extra Component Section */}
-      <MenuTable />
+     
     </div>
   );
 }

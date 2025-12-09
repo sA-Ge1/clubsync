@@ -363,7 +363,7 @@ export default function LoginPage() {
                         onClick={handleGoogleLogin}
                         disabled={loading}
                       >
-                        {loading ? "Loading..." : "Sign in with Google"}
+                        {loading ? "Loading..." : "Login in with Google"}
                       </Button>
                     </motion.div>
                   </>
