@@ -3,12 +3,14 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+type Role = "club" | "student" | "faculty" | "admin" | "notset";
+
 interface UserInfo {
   auth_id: string;
   email: string;
   name: string;
   user_id: string;
-  role?: "club" | "student" | "faculty";
+  role: Role;
 }
 
 interface UserContextType {
@@ -53,12 +55,19 @@ export function UserProvider({ children }: UserProviderProps) {
       console.error("Error fetching user metadata:", error);
     }
 
+    const role: Role = (data?.role as Role) ?? "notset";
+    const derivedId =
+      data?.student_id ??
+      data?.club_id ??
+      data?.faculty_id ??
+      (role === "admin" ? authUser.id : "notset");
+
     setUser({
       auth_id: authUser.id,
       email: authUser.email!??data?.email??"",
       name:authUser.user_metadata.name??"",
-      role: data?.role??"notset",
-      user_id: data?.student_id??data?.club_id??data?.faculty_id??"notset",
+      role,
+      user_id: derivedId,
     });
 
     setLoading(false);

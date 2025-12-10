@@ -59,6 +59,7 @@ export default function InventoryPage() {
     message: "",
   });
   const [userMemberships, setUserMemberships] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (userLoading) return;
@@ -69,7 +70,7 @@ export default function InventoryPage() {
       return;
     }
 
-    if (!user.user_id || user.user_id === "notset") {
+    if (user.role !== "admin" && (!user.user_id || user.user_id === "notset")) {
       toast.error("Please setup account properly");
       router.push("/");
       return;
@@ -80,6 +81,10 @@ export default function InventoryPage() {
   }, [user, userLoading]);
 
   const fetchUserMemberships = async () => {
+    if (user?.role === "admin") {
+      setUserMemberships(new Set());
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from("memberships")
@@ -98,6 +103,28 @@ export default function InventoryPage() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
+
+      if (user?.role === "admin") {
+        const { data, error } = await supabase
+          .from("inventory")
+          .select(`
+            *,
+            clubs:club_id (
+              name
+            )
+          `);
+
+        if (error) throw error;
+
+        const formattedInventory: InventoryItem[] = (data || []).map((item: any) => ({
+          ...item,
+          club_name: item.clubs?.name || "Unknown Club",
+          is_member: true,
+        }));
+
+        setInventory(formattedInventory);
+        return;
+      }
 
       // Fetch public inventory
       const { data: publicInventory, error: publicError } = await supabase
@@ -159,6 +186,10 @@ export default function InventoryPage() {
   };
 
   const handleRequest = (item: InventoryItem) => {
+    if (user?.role === "admin") {
+      toast.error("Admins cannot place borrow requests");
+      return;
+    }
     setSelectedItem(item);
     setRequestForm({
       quantity: 1,
@@ -169,6 +200,7 @@ export default function InventoryPage() {
   };
 
   const submitRequest = async () => {
+    if (isSubmitting) return;
     if (!selectedItem || !user || !requestForm.quantity || requestForm.quantity <= 0) {
       toast.error("Please fill in all required fields");
       return;
@@ -180,6 +212,7 @@ export default function InventoryPage() {
     }
 
     try {
+      setIsSubmitting(true);
       // Case 1: User is a club - direct borrow
       if (user.role === "club") {
         const { error } = await supabase.from("transactions").insert({
@@ -260,6 +293,8 @@ export default function InventoryPage() {
     } catch (error: any) {
       console.error("Error submitting request:", error);
       toast.error(error.message || "Failed to submit request");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -449,7 +484,9 @@ export default function InventoryPage() {
                         >
                           Cancel
                         </Button>
-                        <Button onClick={submitRequest}>Submit Request</Button>
+                        <Button onClick={submitRequest} disabled={isSubmitting}>
+                          {isSubmitting ? "Submitting..." : "Submit Request"}
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>

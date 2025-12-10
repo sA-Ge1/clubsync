@@ -27,6 +27,7 @@ const navItems = [
   { label: "Clubs", path: "/clubs" },
   { label: "Departments", path: "/departments" },
   { label: "AI Chat", path: "/chat" },
+  { label: "Admin", path: "/admin" },
 ];
 
 const Header = () => {

@@ -195,6 +195,7 @@ export default function SignUpPage() {
 
   // 1. Send OTP via email
   const handleSendOTP = async () => {
+    if (isSendingOTP) return;
     if (!isValidEmail(email)) {
       setError("Please enter a valid email address");
       return;
@@ -238,6 +239,7 @@ export default function SignUpPage() {
 
   // 2. Verify OTP
   const handleVerifyOTP = async () => {
+    if (isVerifyingOTP) return;
     if (!otp || otp.length !== 6) {
       setError("Please enter the complete 6-digit OTP");
       return;
@@ -304,6 +306,7 @@ export default function SignUpPage() {
 
   // 4. Final sign up (with validation)
   const handleSignUp = async (e?: React.FormEvent) => {
+    if (isSigningUp) return;
     if (e) e.preventDefault();
 
     // Validation checks - only check verification for email auth method
@@ -322,6 +325,7 @@ export default function SignUpPage() {
   };
 
   const completeGoogleSignup = async (e?: React.FormEvent) => {
+    if (isSigningUp) return;
     if (e) e.preventDefault();
     setError("")
     setIsSigningUp(true)
@@ -371,20 +375,34 @@ export default function SignUpPage() {
       idColumn = "club_id";
       role = "club";
       matchField = "club_id";
+    } else if (userType === "admin") {
+      role = "admin";
+      const code = process.env.NEXT_PUBLIC_ADMIN_CODE;
+      if (!code || usn !== code) {
+        setError("Invalid admin code");
+        setIsSigningUp(false);
+        return;
+      }
+      // No table validation for admin; link by auth id
+      table = "";
+      idColumn = "";
+      matchField = "";
     }
   
     // Validate user exists in chosen table
-    const { data, error } = await supabase
-      .from(table)
-      .select("*")
-      .eq(idColumn, usn)
-      .eq("email", email)
-      .maybeSingle();
-  
-    if (error || !data) {
-      setError("No matching record found for email + ID.");
-      setIsSigningUp(false);
-      return;
+    if (table) {
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .eq(idColumn, usn)
+        .eq("email", email)
+        .maybeSingle();
+
+      if (error || !data) {
+        setError("No matching record found for email + ID.");
+        setIsSigningUp(false);
+        return;
+      }
     }
   
     // Update your auth table entry
@@ -395,7 +413,9 @@ export default function SignUpPage() {
     };
   
     // Add the matching student_id / faculty_id / club_id
-    updates[matchField] = usn;
+    if (matchField) {
+      updates[matchField] = usn;
+    }
   
     const { error: updateError } = await supabase
       .from("auth")
@@ -579,11 +599,12 @@ export default function SignUpPage() {
                                   <SelectItem value="student_id">Student USN</SelectItem>
                                   <SelectItem value="faculty_id">Faculty ID</SelectItem>
                                   <SelectItem value="club_id">Club ID</SelectItem>
+                                <SelectItem value="admin">Admin (code)</SelectItem>
                                 </SelectGroup>
                               </SelectContent>
                               
                             </Select>
-                            <Label htmlFor="usn" className="text-sm font-medium">{userType==""?"ID":(userType=="student_id"?"Enter USN":(userType=="faculty_id"?"Enter Faculty ID":"Enter CLub ID"))}</Label>
+                            <Label htmlFor="usn" className="text-sm font-medium">{userType==""?"ID":(userType=="student_id"?"Enter USN":(userType=="faculty_id"?"Enter Faculty ID":userType=="club_id"?"Enter CLub ID":"Enter Admin Code"))}</Label>
                             <Input
                               id="usn"
                               type="text"
@@ -593,6 +614,11 @@ export default function SignUpPage() {
                               onChange={(e) => setUsn(e.target.value)}
                               className="border-2 p-3 bg-foreground/5 border-border focus:border-primary transition-all duration-200 focus:shadow-sm"
                             />
+                            {userType==="admin" && (
+                              <p className="text-xs text-muted-foreground">
+                                Provide the admin invite code.
+                              </p>
+                            )}
                           </motion.div>
 
                           <motion.div 

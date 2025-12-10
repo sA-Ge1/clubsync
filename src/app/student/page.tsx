@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -70,6 +71,7 @@ export default function StudentDashboardPage() {
   const { user, loading: userLoading } = useUserInfo();
   const router = useRouter();
 
+  const [adminUsn, setAdminUsn] = useState("");
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [transactions, setTransactions] = useState<TransactionEntry[]>([]);
@@ -86,9 +88,18 @@ export default function StudentDashboardPage() {
       return;
     }
 
-    if (user.role !== "student") {
+    if (user.role !== "student" && user.role !== "admin") {
       toast.error("Only students can access the user dashboard");
       router.push("/");
+      return;
+    }
+
+    if (user.role === "admin") {
+      if (!adminUsn) {
+        setPageLoading(false);
+        return;
+      }
+      fetchDashboardData(adminUsn);
       return;
     }
 
@@ -99,7 +110,7 @@ export default function StudentDashboardPage() {
     }
 
     fetchDashboardData(user.user_id);
-  }, [user, userLoading]);
+  }, [user, userLoading, adminUsn]);
 
   const fetchDashboardData = async (usn: string) => {
     try {
@@ -260,7 +271,34 @@ export default function StudentDashboardPage() {
     });
   }, [transactions, requestSearch, sortOption]);
 
-  if (userLoading || pageLoading) {
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user?.role === "admin" && !adminUsn) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
+        <div className="max-w-md w-full space-y-3">
+          <h1 className="text-2xl font-semibold text-center">Admin Student Lookup</h1>
+          <p className="text-sm text-muted-foreground text-center">
+            Enter a student USN to view their dashboard.
+          </p>
+          <Input
+            placeholder="Student USN"
+            value={adminUsn}
+            onChange={(e) => setAdminUsn(e.target.value)}
+          />
+          <Button onClick={() => adminUsn && setPageLoading(true)}>Load Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

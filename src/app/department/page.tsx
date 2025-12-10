@@ -26,6 +26,7 @@ import {
   canAdvanceStatus,
   parseTransactionStatus,
 } from "@/lib/transactionStatus";
+import { Select, SelectValue, SelectTrigger, SelectItem, SelectContent } from "@/components/ui/select";
 
 interface DepartmentRequest {
   request_id: string;
@@ -52,6 +53,9 @@ export default function DepartmentPage() {
   const [requests, setRequests] = useState<DepartmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [availableDepartments, setAvailableDepartments] = useState<{ dept_id: string; name: string }[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (userLoading) return;
@@ -62,43 +66,74 @@ export default function DepartmentPage() {
       return;
     }
 
-    if (user.role !== "faculty" || !user.user_id || user.user_id === "notset") {
+    if (user.role !== "faculty" && user.role !== "admin") {
       toast.error("Only faculty members can access department pages");
       router.push("/");
       return;
     }
 
-    fetchDepartmentData();
+    if (user.role === "admin") {
+      fetchAdminDepartments();
+    } else {
+      fetchDepartmentData();
+    }
   }, [user, userLoading]);
 
-  const fetchDepartmentData = async () => {
+  const fetchAdminDepartments = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("departments")
+        .select("dept_id, name")
+        .order("name");
+      if (error) throw error;
+      setAvailableDepartments(data || []);
+      if (data && data.length > 0) {
+        const idToUse = selectedDeptId || data[0].dept_id;
+        setSelectedDeptId(idToUse);
+        await fetchDepartmentData(idToUse);
+      }
+      setIsAuthorized(true);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      toast.error("Failed to load departments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDepartmentData = async (deptIdOverride?: string) => {
     try {
       setLoading(true);
 
-      // Fetch faculty data to get department
-      const { data: faculty, error: facultyError } = await supabase
-        .from("faculty")
-        .select("faculty_id, dept_id, name, email")
-        .eq("faculty_id", user?.user_id)
-        .single();
+      let deptId = deptIdOverride;
+      if (!deptId) {
+        // Fetch faculty data to get department
+        const { data: faculty, error: facultyError } = await supabase
+          .from("faculty")
+          .select("faculty_id, dept_id, name, email")
+          .eq("faculty_id", user?.user_id)
+          .single();
 
-      if (facultyError || !faculty) {
-        toast.error("Faculty record not found");
-        router.push("/");
-        return;
-      }
+        if (facultyError || !faculty) {
+          toast.error("Faculty record not found");
+          router.push("/");
+          return;
+        }
 
-      if (!faculty.dept_id) {
-        toast.error("You are not assigned to a department");
-        router.push("/");
-        return;
+        if (!faculty.dept_id) {
+          toast.error("You are not assigned to a department");
+          router.push("/");
+          return;
+        }
+        deptId = faculty.dept_id;
       }
 
       // Fetch department data
       const { data: department, error: deptError } = await supabase
         .from("departments")
         .select("*")
-        .eq("dept_id", faculty.dept_id)
+        .eq("dept_id", deptId)
         .single();
 
       if (deptError || !department) {
@@ -109,9 +144,10 @@ export default function DepartmentPage() {
 
       setDepartmentData(department);
       setIsAuthorized(true);
-
-      // Fetch department requests
-      await fetchRequests(faculty.dept_id);
+      if(deptId){
+        // Fetch department requests
+        await fetchRequests(deptId);
+      }
     } catch (error) {
       console.error("Error fetching department data:", error);
       toast.error("An error occurred");
@@ -185,6 +221,8 @@ export default function DepartmentPage() {
     transactionId: string,
     nextStatus: TransactionStatusCode
   ) => {
+    if (updatingStatus) return;
+    setUpdatingStatus(transactionId);
     try {
       const request = requests.find((r) => r.transaction_id === transactionId);
 
@@ -218,6 +256,8 @@ export default function DepartmentPage() {
     } catch (error: any) {
       console.error("Error updating request:", error);
       toast.error(error.message || "Failed to update request");
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -247,6 +287,29 @@ export default function DepartmentPage() {
           <p className="text-muted-foreground">
             Review and manage inventory requests from students
           </p>
+          {user?.role === "admin" && availableDepartments.length > 0 && (
+            <div className="mt-3 flex gap-3 items-center">
+              <p className="text-sm text-muted-foreground">Viewing department:</p>
+              <Select
+                value={selectedDeptId}
+                onValueChange={(value) => {
+                  setSelectedDeptId(value);
+                  fetchDepartmentData(value);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDepartments.map((d) => (
+                    <SelectItem key={d.dept_id} value={d.dept_id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Pending Requests */}

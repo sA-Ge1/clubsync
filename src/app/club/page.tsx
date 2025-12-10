@@ -146,6 +146,8 @@ export default function ClubPage() {
   const { user, loading: userLoading } = useUserInfo();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("members");
+  const [selectedClubId, setSelectedClubId] = useState<string>("");
+  const [availableClubs, setAvailableClubs] = useState<{ club_id: string; name: string }[]>([]);
   const [clubData, setClubData] = useState<any>(null);
   const [clubLoading, setClubLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
@@ -230,16 +232,43 @@ export default function ClubPage() {
       return;
     }
 
-    if (user.role !== "club" || !user.user_id || user.user_id === "notset") {
+    if (user.role !== "club" && user.role !== "admin") {
       toast.error("You don't have access to club management");
       router.push("/");
       return;
     }
 
-    fetchClubData();
+    if (user.role === "admin") {
+      fetchAdminClubs();
+    } else {
+      setSelectedClubId(user.user_id);
+      fetchClubData(user.user_id);
+    }
   }, [user, userLoading]);
 
-  const fetchClubData = async () => {
+  const fetchAdminClubs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clubs")
+        .select("club_id, name")
+        .order("name");
+
+      if (error) throw error;
+
+      const options = data || [];
+      setAvailableClubs(options);
+      if (options.length > 0) {
+        const idToUse = selectedClubId || options[0].club_id;
+        setSelectedClubId(idToUse);
+        await fetchClubData(idToUse);
+      }
+    } catch (error) {
+      console.error("Error fetching clubs:", error);
+      toast.error("Failed to load clubs for admin");
+    }
+  };
+
+  const fetchClubData = async (clubId: string) => {
     try {
       setClubLoading(true);
 
@@ -247,7 +276,7 @@ export default function ClubPage() {
       const { data: club, error: clubError } = await supabase
         .from("clubs")
         .select("*")
-        .eq("club_id", user?.user_id)
+        .eq("club_id", clubId)
         .single();
 
       if (clubError) {
@@ -258,16 +287,21 @@ export default function ClubPage() {
 
       setClubData(club);
 
-      // Check if user email matches club email (for first-time setup)
-      if (club.email && user?.email === club.email) {
-        setIsAuthorized(true);
-      } else if (!club.email) {
-        // First user setup - allow if no email set yet
+      // Admins bypass email checks
+      if (user?.role === "admin") {
         setIsAuthorized(true);
       } else {
-        toast.error("Your email doesn't match the club email");
-        router.push("/");
-        return;
+        // Check if user email matches club email (for first-time setup)
+        if (club.email && user?.email === club.email) {
+          setIsAuthorized(true);
+        } else if (!club.email) {
+          // First user setup - allow if no email set yet
+          setIsAuthorized(true);
+        } else {
+          toast.error("Your email doesn't match the club email");
+          router.push("/");
+          return;
+        }
       }
 
       // Fetch members
@@ -308,7 +342,7 @@ export default function ClubPage() {
         usn: m.usn,
         name: m.students?.name || "Unknown",
         email: m.students?.email || "",
-        role: (m.role || "New Member"),
+        role: (m.role || "new member"),
       }));
 
       setMembers(formattedMembers);
@@ -408,6 +442,7 @@ export default function ClubPage() {
   };
 
   const handleAddMember = async () => {
+    if (isAddingMember) return;
     if (!newMemberUSN.trim() || !clubData) {
       toast.error("Please enter a valid USN");
       return;
@@ -450,7 +485,7 @@ export default function ClubPage() {
 
       toast.success("Member added successfully");
       setNewMemberUSN("");
-      setNewMemberRole("New Member");
+      setNewMemberRole("new member");
       setMemberDialogOpen(false);
       fetchMembers(clubData.club_id);
     } catch (error: any) {
@@ -461,6 +496,7 @@ export default function ClubPage() {
   };
 
   const handleBulkRemoveMembers = async () => {
+    if (isDeletingMembers) return;
     if (selectedMembers.size === 0) {
       toast.error("Please select members to remove");
       return;
@@ -487,6 +523,7 @@ export default function ClubPage() {
   };
 
   const handleUpdateRole = async (memberId: string, newRole: string) => {
+    if (updatingRole) return;
     if (!clubData) return;
 
     setUpdatingRole(memberId);
@@ -577,6 +614,7 @@ export default function ClubPage() {
     });
 
   const handleSaveInventory = async () => {
+    if (isUpdatingInventory) return;
     if (!inventoryForm.name.trim() || !clubData) {
       toast.error("Please fill in all required fields");
       return;
@@ -629,6 +667,7 @@ export default function ClubPage() {
   };
 
   const handleDeleteInventory = async (inventoryId: string) => {
+    if (isDeletingInventory) return;
     setIsDeletingInventory(inventoryId)
 
     try {
@@ -651,6 +690,7 @@ export default function ClubPage() {
     transactionId: string,
     nextStatus: TransactionStatusCode
   ) => {
+    if (updatingStatus) return;
     setUpdatingStatus(transactionId);
     try {
       const current =
@@ -742,6 +782,7 @@ export default function ClubPage() {
   };
 
   const handleSaveMessage = async () => {
+    if (isSavingMessage) return;
     if (!selectedTransaction) return;
     
     setIsSavingMessage(true);
@@ -834,6 +875,7 @@ export default function ClubPage() {
   };
 
   const handleSaveFund = async () => {
+    if (isSavingFund) return;
     if (!fundForm.name.trim() || !clubData || fundForm.amount <= 0) {
       toast.error("Please fill in all required fields and ensure amount is greater than 0");
       return;
@@ -915,6 +957,7 @@ export default function ClubPage() {
   };
 
   const handleDeleteFund = async (fundId: string) => {
+    if (isDeletingFund) return;
     setIsDeletingFund(fundId);
     try {
       const { error } = await supabase
@@ -993,6 +1036,29 @@ export default function ClubPage() {
           <p className="text-muted-foreground">
             Manage your club members, inventory, and requests
           </p>
+          {user?.role === "admin" && availableClubs.length > 0 && (
+            <div className="mt-3 flex gap-3 items-center">
+              <p className="text-sm text-muted-foreground">Viewing club:</p>
+              <Select
+                value={selectedClubId}
+                onValueChange={(value) => {
+                  setSelectedClubId(value);
+                  fetchClubData(value);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select club" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableClubs.map((c) => (
+                    <SelectItem key={c.club_id} value={c.club_id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -1097,11 +1163,11 @@ export default function ClubPage() {
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="New Member">New Member</SelectItem>
-                              <SelectItem value="Member">Member</SelectItem>
-                              <SelectItem value="Core Member">Core Member</SelectItem>
-                              <SelectItem value="Co-lead">Co Lead</SelectItem>
-                              <SelectItem value="Team Lead">Team Lead</SelectItem>
+                              <SelectItem value="new member">New Member</SelectItem>
+                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="core member">Core Member</SelectItem>
+                              <SelectItem value="co lead">Co Lead</SelectItem>
+                              <SelectItem value="team lead">Team Lead</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1214,7 +1280,7 @@ export default function ClubPage() {
                                 <SelectItem value="member">Member</SelectItem>
                                 <SelectItem value="core member">Core Member</SelectItem>
                                 <SelectItem value="co lead">Co Lead</SelectItem>
-                                <SelectItem value="Team lead">Team Lead</SelectItem>
+                                <SelectItem value="team lead">Team Lead</SelectItem>
                               </SelectContent>
                             </Select>
                           )}

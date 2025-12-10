@@ -81,7 +81,6 @@ Income-
 
 
 
-db description
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
@@ -135,22 +134,21 @@ CREATE TABLE public.faculty (
   CONSTRAINT faculty_pkey PRIMARY KEY (faculty_id),
   CONSTRAINT faculty_dept_id_fkey FOREIGN KEY (dept_id) REFERENCES public.departments(dept_id)
 );
-create table public.funds (
-  fund_id uuid not null default gen_random_uuid (),
-  amount numeric(10, 2) null,
-  description text null,
-  club_id uuid null,
-  is_credit boolean null,
-  type smallint null default '0'::smallint,
-  bill_date date null,
-  name text null,
-  is_trashed boolean null default false,
-  submited_by text null,
-  constraint funds_pkey primary key (fund_id),
-  constraint funds_club_id_fkey foreign KEY (club_id) references clubs (club_id) on delete set null,
-  constraint funds_submited_by_fkey foreign KEY (submited_by) references students (usn) on update RESTRICT on delete set null
-) TABLESPACE pg_default;
-
+CREATE TABLE public.funds (
+  fund_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  amount numeric,
+  description text,
+  club_id uuid,
+  is_credit boolean,
+  type smallint DEFAULT '0'::smallint,
+  bill_date date,
+  name text,
+  is_trashed boolean DEFAULT false,
+  submitted_by uuid,
+  CONSTRAINT funds_pkey PRIMARY KEY (fund_id),
+  CONSTRAINT funds_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(club_id),
+  CONSTRAINT funds_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.memberships(member_id)
+);
 CREATE TABLE public.inventory (
   inventory_id uuid NOT NULL DEFAULT gen_random_uuid(),
   club_id uuid,
@@ -162,6 +160,13 @@ CREATE TABLE public.inventory (
   is_public boolean NOT NULL DEFAULT true,
   CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id),
   CONSTRAINT inventory_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(club_id)
+);
+CREATE TABLE public.knowledge_chunks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  content text NOT NULL,
+  embedding USER-DEFINED,
+  metadata jsonb,
+  CONSTRAINT knowledge_chunks_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.memberships (
   member_id uuid NOT NULL DEFAULT gen_random_uuid(),

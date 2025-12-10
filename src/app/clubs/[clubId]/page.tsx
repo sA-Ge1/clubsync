@@ -145,7 +145,7 @@ export default function ClubPublicPage() {
   const isClubEmailEditor =
     !!club && !!user && user.role === "club" && user.user_id === club.club_id && user.email === club.email;
 
-  const canViewFunds = isClubEmailEditor || isMemberOfClub;
+  const canViewFunds = isClubEmailEditor || isMemberOfClub || user?.role === "admin";
 
   useEffect(() => {
     if (!clubId || !canViewFunds) return;
@@ -222,7 +222,7 @@ export default function ClubPublicPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to all clubs
         </Button>
-        {isClubEmailEditor && (
+        {isClubEmailEditor||user?.role === "admin" && (
                 <Button
                     variant="ghost"
                     className="mb-2 -ml-2 inline-flex items-center gap-2"
@@ -369,7 +369,7 @@ export default function ClubPublicPage() {
                       <IndianRupee className="h-5 w-5 text-primary" />
                       Funds Overview
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="p-2">
                       Detailed fund records are visible only to club members and club administrators.
                     </CardDescription>
                   </div>

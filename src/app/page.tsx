@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, Package, FileCheck, Shield, Zap, ArrowRight } from "lucide-react";
 import MenuTable from "@/components/MenuItems";
-import { getRelevantChunks } from "@/lib/rag";
 export default function Home() {
   const { user, loading } = useUserInfo();
   const router = useRouter();
@@ -38,13 +37,14 @@ export default function Home() {
     },
   ];
 
-  const roleButtons = {
+  const roleButtons: Record<string, { label: string; href: string }> = {
     club: { label: "Manage Club", href: "/club" },
     student: { label: "Student Dashboard", href: "/student" },
     faculty: { label: "Department", href: "/department" },
+    admin: { label: "Admin Console", href: "/admin" },
   };
 
-  const roleBtn = user?.role ? roleButtons[user.role] : null;
+  const roleBtn = user?.role && user.role !== "notset" ? roleButtons[user.role] : null;
 
   return (
     <div className="min-h-screen bg-background">
