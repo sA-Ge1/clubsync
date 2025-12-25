@@ -60,24 +60,21 @@ Global rules:
 
 
 
-funds.type code-
-expenditure-
+0 = ADMINISTRATIVE — general administrative expenses
+1 = EVENT — costs related to events conducted by the club
+2 = PROMOTIONAL — marketing and publicity expenses
+3 = EQUIPMENT — purchase or repair of club equipment
+4 = TRAINING — expenses for training sessions, workshops, or skill development
+5 = MISCELLANEOUS — expenses that do not fall under any specific category
+6 = OTHER_EXP — other expenditure not covered above
 
-0-Administrative
-1-Event
-2-Promotional
-3-Equipment
-4-Training
-5-Miscellaneous
-
-
-Income-
-
-6-college
-7-sponsors
-8-Workshops
-10-Members contribution
-11-Services
+Income Types:
+7 = COLLEGE — funds received from college or institution
+8 = SPONSORS — sponsorship funds received from external parties
+9 = WORKSHOPS — income generated from workshops conducted by the club
+10 = MEMBERS_CONTRIBUTION — contributions collected from club members
+11 = SERVICES — revenue from services rendered by the club
+12 = OTHER_INC — miscellaneous income not matching known categories
 
 
 

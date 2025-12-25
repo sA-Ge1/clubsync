@@ -81,8 +81,10 @@ import {
   isIncome,
   FundTypeCode,
 } from "@/lib/fundTypeStatus";
-import { DollarSign, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { DollarSign, ArrowDownCircle, ArrowUpCircle, BarChart3 } from "lucide-react";
+import FundStatistics from "@/components/FundStatistics";
 type TabType = "members" | "inventory" | "requests" | "funds";
+type FundsViewType = "table" | "statistics";
 
 interface Member {
   member_id: string;
@@ -222,6 +224,7 @@ export default function ClubPage() {
   const [fundSearchQuery, setFundSearchQuery] = useState("");
   const [fundTypeFilter, setFundTypeFilter] = useState<"all" | "expenditure" | "income">("all");
   const [fundCreditFilter, setFundCreditFilter] = useState<"all" | "credit" | "debit">("all");
+  const [fundsView, setFundsView] = useState<FundsViewType>("table");
 
   useEffect(() => {
     if (userLoading) return;
@@ -1062,7 +1065,7 @@ export default function ClubPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b">
+        <div className="flex gap-2 mb-6 border-b flex-wrap">
           <button
             onClick={() => setActiveTab("members")}
             className={`px-4 py-2 font-medium transition-colors ${
@@ -1718,7 +1721,27 @@ export default function ClubPage() {
                     Manage your club's income and expenditure records.
                   </CardDescription>
                 </div>
-                <Dialog open={fundsDialogOpen} onOpenChange={setFundsDialogOpen}>
+                <div className="flex gap-2">
+                  <div className="flex gap-1 border rounded-md p-1">
+                    <Button
+                      variant={fundsView === "table" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setFundsView("table")}
+                    >
+                      <IndianRupee className="h-4 w-4 mr-2" />
+                      Table
+                    </Button>
+                    <Button
+                      variant={fundsView === "statistics" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setFundsView("statistics")}
+                    >
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Statistics
+                    </Button>
+                  </div>
+                  {fundsView === "table" && (
+                    <Dialog open={fundsDialogOpen} onOpenChange={setFundsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={() => openFundDialog()}>
                       <Plus className="h-4 w-4" />
@@ -1868,9 +1891,15 @@ export default function ClubPage() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
+              {fundsView === "statistics" ? (
+                <FundStatistics funds={funds} />
+              ) : (
+                <>
               {/* Filters */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div className="relative w-full sm:max-w-sm">
@@ -2079,6 +2108,8 @@ export default function ClubPage() {
                   )}
                 </TableBody>
               </Table>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
