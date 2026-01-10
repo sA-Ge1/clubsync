@@ -1156,8 +1156,9 @@ export default function ClubPage() {
                             value={newMemberUSN}
                             onChange={(e) => setNewMemberUSN(e.target.value)}
                             placeholder="Enter USN"
-                            className="w-[90%] ml-2"
+                            className="w-[90%] ml-2 uppercase"
                           />
+
                         </div>
                         <div>
                           <Label htmlFor="role" className="p-2">Role</Label>

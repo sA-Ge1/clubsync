@@ -72,6 +72,7 @@ export default function StudentDashboardPage() {
   const router = useRouter();
 
   const [adminUsn, setAdminUsn] = useState("");
+  const [studentSet,setStudentSet]=  useState(false);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [transactions, setTransactions] = useState<TransactionEntry[]>([]);
@@ -95,7 +96,7 @@ export default function StudentDashboardPage() {
     }
 
     if (user.role === "admin") {
-      if (!adminUsn) {
+      if (!studentSet) {
         setPageLoading(false);
         return;
       }
@@ -108,14 +109,13 @@ export default function StudentDashboardPage() {
       router.push("/");
       return;
     }
-
+    setStudentSet(true);
     fetchDashboardData(user.user_id);
   }, [user, userLoading, adminUsn]);
 
   const fetchDashboardData = async (usn: string) => {
     try {
       setPageLoading(true);
-
       const [studentRes, membershipRes, transactionRes] = await Promise.all([
         supabase
           .from("students")
@@ -279,7 +279,7 @@ export default function StudentDashboardPage() {
     );
   }
 
-  if (user?.role === "admin" && !adminUsn) {
+  if (user?.role === "admin" && !studentSet) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
         <div className="max-w-md w-full space-y-3">
@@ -290,9 +290,15 @@ export default function StudentDashboardPage() {
           <Input
             placeholder="Student USN"
             value={adminUsn}
-            onChange={(e) => setAdminUsn(e.target.value)}
+            type="text"
+            onChange={(e) => setAdminUsn(e.target.value.toUpperCase())}
           />
-          <Button onClick={() => adminUsn && setPageLoading(true)}>Load Dashboard</Button>
+          <Button onClick={() =>{
+            setStudentSet(true);
+            fetchDashboardData(adminUsn);
+            }}
+            disabled={adminUsn.length!=10}
+            >Load Dashboard</Button>
         </div>
       </div>
     );
@@ -308,10 +314,17 @@ export default function StudentDashboardPage() {
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-5">
         <p className="text-muted-foreground">
           Unable to load your dashboard. Please try again later.
         </p>
+        {(user?.role=="admin")&&(
+            <Button variant="outline" onClick={()=>{
+              setAdminUsn("");
+              setProfile(null);
+              setStudentSet(false);
+            }}>Clear</Button>
+          )}
       </div>
     );
   }
@@ -323,11 +336,23 @@ export default function StudentDashboardPage() {
           <p className="text-sm uppercase tracking-wide text-primary/70 font-semibold">
             Student Hub
           </p>
-          <h1 className="text-3xl font-bold">Welcome back, {profile.name}</h1>
-          <p className="text-muted-foreground max-w-2xl">
-            Review your membership summary, track borrowing requests, and keep
-            your profile up-to-date in a single dashboard.
-          </p>
+          <div className="flex justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Welcome back, {profile.name}</h1>
+              <p className="text-muted-foreground max-w-2xl">
+                Review your membership summary, track borrowing requests, and keep
+                your profile up-to-date in a single dashboard.
+              </p>
+            </div>
+            <div>
+              <Button variant="outline" onClick={()=>{
+                setAdminUsn("");
+                setProfile(null);
+                setStudentSet(false);
+              }}>Clear</Button>
+            </div>
+          </div>
+          
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -125,20 +125,42 @@
     animation: none;
     mix-blend-mode: normal;
 }
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Base document styles (matches what you saw) */
+html {
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  line-height: 1.5;
+  font-family: var(--default-font-family);
+  font-feature-settings: var(--default-font-feature-settings, normal);
+  font-variation-settings: var(--default-font-variation-settings, normal);
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* Scrollbar size */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Scrollbar thumb (light mode) */
+::-webkit-scrollbar-thumb {
+  background: #00000066;
+  border-radius: 9999px;
+}
+
+/* Scrollbar thumb (dark mode) */
+.dark ::-webkit-scrollbar-thumb {
+  background: #4342426e;
+  height: 5px;
+}
+
+/* Scrollbar track */
 ::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+/* Scrollbar track (dark mode — explicitly same as source) */
+.dark ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.4);
-  border-radius: 8px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary));
-}

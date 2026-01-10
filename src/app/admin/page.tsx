@@ -213,7 +213,7 @@ export default function AdminPage() {
     if (savingStudent) return;
     setSavingStudent(true);
     const payload = {
-      usn: studentForm.usn,
+      usn: studentForm.usn?.toUpperCase(),
       name: studentForm.name,
       email: studentForm.email,
       semester: studentForm.semester ?? null,
@@ -489,6 +489,7 @@ export default function AdminPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Input
             placeholder="USN *"
+            className="uppercase"
             value={studentForm.usn ?? ""}
             onChange={(e) => setStudentForm((p) => ({ ...p, usn: e.target.value }))}
           />
