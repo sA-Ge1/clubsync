@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
+import * as XLSX from "xlsx";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileUpload } from "@/components/ui/file-upload";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Upload } from "lucide-react";
 
 type TabKey = "clubs" | "departments" | "students" | "faculty";
 
@@ -81,11 +95,20 @@ export default function AdminPage() {
   const [deletingDeptId, setDeletingDeptId] = useState<string | null>(null);
   const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
   const [deletingFacultyId, setDeletingFacultyId] = useState<string | null>(null);
+  const [uploadingStudents, setUploadingStudents] = useState(false);
+  const [uploadingFaculty, setUploadingFaculty] = useState(false);
+  const [uploadingClubs, setUploadingClubs] = useState(false);
+  const [uploadingDepartments, setUploadingDepartments] = useState(false);
 
   const [clubForm, setClubForm] = useState<Partial<Club>>({});
   const [deptForm, setDeptForm] = useState<Partial<Department>>({});
   const [studentForm, setStudentForm] = useState<Partial<Student>>({});
   const [facultyForm, setFacultyForm] = useState<Partial<Faculty>>({});
+
+  const [facultyFile, setFacultyFile] = useState<File | null>(null)
+  const [studentFile, setStudentFile] = useState<File | null>(null)
+  const [clubFile, setClubFile] = useState<File | null>(null)
+  const [departmentFile, setDepartmentFile] = useState<File | null>(null)
 
   const isAdmin = useMemo(() => user?.role === "admin", [user]);
 
@@ -232,6 +255,79 @@ export default function AdminPage() {
     setSavingStudent(false);
   };
 
+
+  const handleStudentBulkUpload = async () => {
+    if (!studentFile) return;
+
+    setUploadingStudents(true);
+    try {
+      const data = await studentFile.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<any>(worksheet, { defval: null });
+
+      const payload = rows
+        .map((row) => {
+          const usnRaw = row.usn ?? row.USN ?? row.Usn;
+          const nameRaw = row.name ?? row.Name;
+          const emailRaw = row.email ?? row.Email;
+          const semRaw = row.semester ?? row.Semester ?? row.sem ?? row.Sem;
+          const deptRaw =
+            row.dept_id ?? row.dept ?? row.department_id ?? row.DepartmentId;
+
+          const usn = usnRaw ? String(usnRaw).trim().toUpperCase() : "";
+          const name = nameRaw ? String(nameRaw).trim() : "";
+          const email = emailRaw ? String(emailRaw).trim() : "";
+          const semester =
+            semRaw !== undefined && semRaw !== null && semRaw !== ""
+              ? Number(semRaw)
+              : null;
+          const dept_id = deptRaw ? String(deptRaw).trim() : null;
+
+          if (!usn || !name || !email) {
+            return null;
+          }
+
+          return {
+            usn,
+            name,
+            email,
+            semester,
+            dept_id,
+          };
+        })
+        .filter(Boolean) as {
+        usn: string;
+        name: string;
+        email: string;
+        semester: number | null;
+        dept_id: string | null;
+      }[];
+
+      if (!payload.length) {
+        toast.error("No valid student rows found in file");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("students")
+        .upsert(payload, { onConflict: "usn" });
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Uploaded/updated ${payload.length} students`);
+      await loadStudents();
+      setStudentFile(null); // Clear the file after successful upload
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to upload students");
+    } finally {
+      setUploadingStudents(false);
+    }
+  };
+
   const deleteStudent = async (usn: string) => {
     if (deletingStudentId) return;
     setDeletingStudentId(usn);
@@ -267,6 +363,7 @@ export default function AdminPage() {
     setSavingFaculty(false);
   };
 
+
   const deleteFaculty = async (id: string) => {
     if (deletingFacultyId) return;
     setDeletingFacultyId(id);
@@ -278,6 +375,211 @@ export default function AdminPage() {
     toast.success("Faculty deleted");
     await loadFaculty();
     setDeletingFacultyId(null);
+  };
+
+  const handleFacultyBulkUpload = async () => {
+    if (!facultyFile) return;
+
+    setUploadingFaculty(true);
+    try {
+      const data = await facultyFile.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<any>(worksheet, { defval: null });
+
+      const payload = rows
+        .map((row) => {
+          const idRaw =
+            row.faculty_id ?? row.FACULTY_ID ?? row.FacultyId ?? row.id;
+          const nameRaw = row.name ?? row.Name;
+          const emailRaw = row.email ?? row.Email;
+          const deptRaw =
+            row.dept_id ?? row.dept ?? row.department_id ?? row.DepartmentId;
+
+          const faculty_id = idRaw ? String(idRaw).trim() : "";
+          const name = nameRaw ? String(nameRaw).trim() : "";
+          const email = emailRaw ? String(emailRaw).trim() : null;
+          const dept_id = deptRaw ? String(deptRaw).trim() : null;
+
+          if (!faculty_id || !name) {
+            return null;
+          }
+
+          return {
+            faculty_id,
+            name,
+            email,
+            dept_id,
+          };
+        })
+        .filter(Boolean) as {
+        faculty_id: string;
+        name: string;
+        email: string | null;
+        dept_id: string | null;
+      }[];
+
+      if (!payload.length) {
+        toast.error("No valid faculty rows found in file");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("faculty")
+        .upsert(payload, { onConflict: "faculty_id" });
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Uploaded/updated ${payload.length} faculty records`);
+      await loadFaculty();
+      setFacultyFile(null); // Clear the file after successful upload
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to upload faculty");
+    } finally {
+      setUploadingFaculty(false);
+    }
+  };
+
+  const handleClubBulkUpload = async () => {
+    if (!clubFile) return;
+
+    setUploadingClubs(true);
+    try {
+      const data = await clubFile.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<any>(worksheet, { defval: null });
+
+      const payload = rows
+        .map((row) => {
+          const idRaw = row.club_id ?? row.CLUB_ID ?? row.ClubId ?? row.id;
+          const nameRaw = row.name ?? row.Name;
+          const emailRaw = row.email ?? row.Email;
+          const descRaw = row.description ?? row.Description ?? row.desc;
+          const facultyRaw = row.faculty_id ?? row.faculty ?? row.FacultyId;
+          const techRaw = row.technical ?? row.Technical ?? row.tech;
+
+          const club_id = idRaw ? String(idRaw).trim() : undefined;
+          const name = nameRaw ? String(nameRaw).trim() : "";
+          const email = emailRaw ? String(emailRaw).trim() : null;
+          const description = descRaw ? String(descRaw).trim() : null;
+          const faculty_id = facultyRaw ? String(facultyRaw).trim() : null;
+          const technical =
+            techRaw !== undefined && techRaw !== null && techRaw !== ""
+              ? Boolean(techRaw)
+              : null;
+
+          if (!name) {
+            return null;
+          }
+
+          return {
+            club_id,
+            name,
+            email,
+            description,
+            faculty_id,
+            technical,
+          };
+        })
+        .filter(Boolean) as {
+        club_id?: string;
+        name: string;
+        email: string | null;
+        description: string | null;
+        faculty_id: string | null;
+        technical: boolean | null;
+      }[];
+
+      if (!payload.length) {
+        toast.error("No valid club rows found in file");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("clubs")
+        .upsert(payload, { onConflict: "club_id" });
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Uploaded/updated ${payload.length} clubs`);
+      await loadClubs();
+      setClubFile(null); // Clear the file after successful upload
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to upload clubs");
+    } finally {
+      setUploadingClubs(false);
+    }
+  };
+
+  const handleDepartmentBulkUpload = async () => {
+    if (!departmentFile) return;
+
+    setUploadingDepartments(true);
+    try {
+      const data = await departmentFile.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<any>(worksheet, { defval: null });
+
+      const payload = rows
+        .map((row) => {
+          const idRaw = row.dept_id ?? row.DEPT_ID ?? row.DeptId ?? row.id;
+          const nameRaw = row.name ?? row.Name;
+          const hodRaw = row.hod ?? row.HOD ?? row.head ?? row.Head;
+          const descRaw = row.description ?? row.Description ?? row.desc;
+
+          const dept_id = idRaw ? String(idRaw).trim() : undefined;
+          const name = nameRaw ? String(nameRaw).trim() : "";
+          const hod = hodRaw ? String(hodRaw).trim() : null;
+          const description = descRaw ? String(descRaw).trim() : null;
+
+          if (!name) {
+            return null;
+          }
+
+          return {
+            dept_id,
+            name,
+            hod,
+            description,
+          };
+        })
+        .filter(Boolean) as {
+        dept_id?: string;
+        name: string;
+        hod: string | null;
+        description: string | null;
+      }[];
+
+      if (!payload.length) {
+        toast.error("No valid department rows found in file");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("departments")
+        .upsert(payload, { onConflict: "dept_id" });
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Uploaded/updated ${payload.length} departments`);
+      await loadDepartments();
+      setDepartmentFile(null); // Clear the file after successful upload
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to upload departments");
+    } finally {
+      setUploadingDepartments(false);
+    }
   };
 
   const filteredClubs = clubs.filter((c) => {
@@ -348,17 +650,65 @@ export default function AdminPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button onClick={upsertClub} disabled={savingClub}>Save</Button>
           <Button variant="outline" onClick={() => setClubForm({})} disabled={savingClub}>Clear</Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline"><Upload/></Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Select and upload CSV / Excel files
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This overwrites existing data if the club ID already exists and adds new entries.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              {/* Body */}
+              <div className="py-4">
+              <FileUpload
+                maxFiles={1}
+                acceptTypes={[
+                  ".csv",
+                  "application/vnd.ms-excel",
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ]}
+                onChange={(files) => {
+                  setClubFile(files[0] ?? null)
+                }}
+              />
+
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={uploadingClubs}>
+                  Cancel
+                </AlertDialogCancel>
+
+                <AlertDialogAction
+                  onClick={handleClubBulkUpload}
+                  disabled={!clubFile || uploadingClubs}
+                >
+                  {uploadingClubs ? "Uploading..." : "Continue"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-        <div className="flex">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Input
             placeholder="Search by name, id, email"
             value={clubSearch}
             onChange={(e) => setClubSearch(e.target.value)}
             className="max-w-sm"
           />
+          <span className="text-xs text-muted-foreground">
+            Bulk upload supports CSV or Excel with columns like club_id, name, email, description, faculty_id, technical.
+          </span>
         </div>
         <Table>
           <TableHeader>
@@ -430,17 +780,65 @@ export default function AdminPage() {
             className="sm:col-span-2 lg:col-span-3"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button onClick={upsertDepartment} disabled={savingDept}>Save</Button>
           <Button variant="outline" onClick={() => setDeptForm({})} disabled={savingDept}>Clear</Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline"><Upload/></Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Select and upload CSV / Excel files
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This overwrites existing data if the department ID already exists and adds new entries.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              {/* Body */}
+              <div className="py-4">
+              <FileUpload
+                maxFiles={1}
+                acceptTypes={[
+                  ".csv",
+                  "application/vnd.ms-excel",
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ]}
+                onChange={(files) => {
+                  setDepartmentFile(files[0] ?? null)
+                }}
+              />
+
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={uploadingDepartments}>
+                  Cancel
+                </AlertDialogCancel>
+
+                <AlertDialogAction
+                  onClick={handleDepartmentBulkUpload}
+                  disabled={!departmentFile || uploadingDepartments}
+                >
+                  {uploadingDepartments ? "Uploading..." : "Continue"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-        <div className="flex">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Input
             placeholder="Search by name, id, HOD"
             value={deptSearch}
             onChange={(e) => setDeptSearch(e.target.value)}
             className="max-w-sm"
           />
+          <span className="text-xs text-muted-foreground">
+            Bulk upload supports CSV or Excel with columns like dept_id, name, hod, description.
+          </span>
         </div>
         <Table>
           <TableHeader>
@@ -536,17 +934,65 @@ export default function AdminPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button onClick={upsertStudent} disabled={savingStudent}>Save</Button>
           <Button variant="outline" onClick={() => setStudentForm({})} disabled={savingStudent}>Clear</Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline"> <Upload/></Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Select and upload CSV / Excel files
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This overwrites existing data if the USN already exists and adds new entries.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              {/* Body */}
+              <div className="py-4">
+              <FileUpload
+                maxFiles={1}
+                acceptTypes={[
+                  ".csv",
+                  "application/vnd.ms-excel",
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ]}
+                onChange={(files) => {
+                  setStudentFile(files[0] ?? null)
+                }}
+              />
+
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={uploadingStudents}>
+                  Cancel
+                </AlertDialogCancel>
+
+                <AlertDialogAction
+                  onClick={handleStudentBulkUpload}
+                  disabled={!studentFile || uploadingStudents}
+                >
+                  {uploadingStudents ? "Uploading..." : "Continue"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-        <div className="flex">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Input
             placeholder="Search by name, usn, email, dept"
             value={studentSearch}
             onChange={(e) => setStudentSearch(e.target.value)}
             className="max-w-sm"
           />
+          <span className="text-xs text-muted-foreground">
+            Bulk upload supports CSV or Excel with columns like usn, name, email, semester, dept_id.
+          </span>
         </div>
         <Table>
           <TableHeader>
@@ -629,17 +1075,66 @@ export default function AdminPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button onClick={upsertFaculty} disabled={savingFaculty}>Save</Button>
           <Button variant="outline" onClick={() => setFacultyForm({})} disabled={savingFaculty}>Clear</Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline"><Upload/></Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Select and upload CSV / Excel files
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This overwrites existing data if the ID already exists and adds new entries.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              {/* Body */}
+              <div className="py-4">
+              <FileUpload
+                maxFiles={1}
+                acceptTypes={[
+                  ".csv",
+                  "application/vnd.ms-excel",
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ]}
+                onChange={(files) => {
+                  setFacultyFile(files[0] ?? null)
+                }}
+              />
+
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={uploadingFaculty}>
+                  Cancel
+                </AlertDialogCancel>
+
+                <AlertDialogAction
+                  onClick={handleFacultyBulkUpload}
+                  disabled={!facultyFile || uploadingFaculty}
+                >
+                  {uploadingFaculty ? "Uploading..." : "Continue"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
         </div>
-        <div className="flex">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Input
             placeholder="Search by name, id, email, dept"
             value={facultySearch}
             onChange={(e) => setFacultySearch(e.target.value)}
             className="max-w-sm"
           />
+          <span className="text-xs text-muted-foreground">
+            Bulk upload supports CSV or Excel with columns like faculty_id, name, email, dept_id.
+          </span>
         </div>
         <Table>
           <TableHeader>

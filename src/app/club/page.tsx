@@ -81,6 +81,7 @@ import {
   isIncome,
   FundTypeCode,
 } from "@/lib/fundTypeStatus";
+import { formatCurrency } from "@/lib/utils";
 import { DollarSign, ArrowDownCircle, ArrowUpCircle, BarChart3 } from "lucide-react";
 import FundStatistics from "@/components/FundStatistics";
 type TabType = "members" | "inventory" | "requests" | "funds";
@@ -1928,21 +1929,6 @@ export default function ClubPage() {
                       <SelectItem value="income">Income</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select
-                    value={fundCreditFilter}
-                    onValueChange={(value: "all" | "credit" | "debit") =>
-                      setFundCreditFilter(value)
-                    }
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by transaction" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Transactions</SelectItem>
-                      <SelectItem value="credit">Credit (Income)</SelectItem>
-                      <SelectItem value="debit">Debit (Expenditure)</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
@@ -1954,10 +1940,11 @@ export default function ClubPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      ₹{funds
-                        .filter((f) => f.is_credit)
-                        .reduce((sum, f) => sum + (f.amount || 0), 0)
-                        .toFixed(2)}
+                      {formatCurrency(
+                        funds
+                          .filter((f) => f.is_credit)
+                          .reduce((sum, f) => sum + (f.amount || 0), 0)
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1967,10 +1954,11 @@ export default function ClubPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-red-600">
-                      ₹{funds
-                        .filter((f) => !f.is_credit)
-                        .reduce((sum, f) => sum + (f.amount || 0), 0)
-                        .toFixed(2)}
+                      {formatCurrency(
+                        funds
+                          .filter((f) => !f.is_credit)
+                          .reduce((sum, f) => sum + (f.amount || 0), 0)
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1989,12 +1977,12 @@ export default function ClubPage() {
                           : "text-red-600"
                       }`}
                     >
-                      ₹{funds
-                        .reduce(
+                      {formatCurrency(
+                        funds.reduce(
                           (sum, f) => sum + (f.is_credit ? f.amount : -f.amount || 0),
                           0
                         )
-                        .toFixed(2)}
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -2032,7 +2020,7 @@ export default function ClubPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-semibold">
-                          ₹{fund.amount?.toFixed(2) || "0.00"}
+                          {formatCurrency(fund.amount || 0)}
                         </TableCell>
                         <TableCell>
                           {fund.is_credit ? (

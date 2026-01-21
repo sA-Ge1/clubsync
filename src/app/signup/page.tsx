@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ReactFormState } from "react-dom/client";
+import GoogleIcon from '@mui/icons-material/Google';
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -552,7 +552,7 @@ export default function SignUpPage() {
                             onClick={handleGoogleSignUp}
                             disabled={loading}
                           >
-                            {loading ? "Loading..." : "Sign up with Google"}
+                            <GoogleIcon fontSize="small"/>{loading ? "Loading..." : "Sign up with Google"}
                           </Button>
                         </motion.div>
                       </>

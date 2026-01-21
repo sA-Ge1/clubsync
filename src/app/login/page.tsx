@@ -14,7 +14,7 @@ import {
   InputOTPSeparator,
 } from "@/components/ui/input-otp";
 import { motion, AnimatePresence } from "framer-motion";
-import Footer from "@/components/Footer";
+import GoogleIcon from '@mui/icons-material/Google';
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { useUserInfo } from "@/hooks/useUserInfo";
 // Animation variants
@@ -280,14 +280,8 @@ export default function LoginPage() {
                     className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent mb-2"
                     variants={itemVariants}
                   >
-                    Welcome to CLubSync
+                    Welcome To ClubSync!
                   </motion.h1>
-                  <motion.p 
-                    className="text-balance text-muted-foreground"
-                    variants={itemVariants}
-                  >
-                    Continue with login
-                  </motion.p>
                 </div>
               </CardHeader>
             </motion.div>
@@ -363,7 +357,7 @@ export default function LoginPage() {
                         onClick={handleGoogleLogin}
                         disabled={loading}
                       >
-                        {loading ? "Loading..." : "Login in with Google"}
+                        <GoogleIcon fontSize="small"/>{loading ? "Loading..." : "Login in with Google"}
                       </Button>
                     </motion.div>
                   </>
