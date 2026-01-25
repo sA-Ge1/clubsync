@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
@@ -61,7 +61,7 @@ interface Faculty {
   dept_id: string | null;
 }
 
-export default function Page() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useUserInfo();
@@ -367,5 +367,22 @@ export default function Page() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <SidebarProvider>
+        <AppSidebar activeTab="clubs" onTabChange={() => {}} />
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <span className="text-muted-foreground">Loading...</span>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
