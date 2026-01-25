@@ -33,7 +33,7 @@ export default function RootLayout({
         <ClientProviders>
           <Header/>
           {children}
-          <Footer/>
+          {/* <Footer/> */}
         </ClientProviders>
       </body>
     </html>

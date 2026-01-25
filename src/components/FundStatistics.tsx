@@ -121,7 +121,7 @@ function getDateRange(period: TimePeriod): Date {
 
 
 export default function FundStatistics({ funds }: FundStatisticsProps) {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("30d")
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("all")
   const truncateLabel = (value: any, max = 18) => {
     const s = String(value ?? "");
     return s.length > max ? `${s.slice(0, max)}…` : s;

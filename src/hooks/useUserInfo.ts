@@ -11,6 +11,7 @@ interface UserInfo {
   name: string;
   user_id: string;
   role: Role;
+  avatar:string;
 }
 
 interface UserContextType {
@@ -68,6 +69,7 @@ export function UserProvider({ children }: UserProviderProps) {
       name:authUser.user_metadata.name??"",
       role,
       user_id: derivedId,
+      avatar: authUser.user_metadata.avatar || ""
     });
 
     setLoading(false);
