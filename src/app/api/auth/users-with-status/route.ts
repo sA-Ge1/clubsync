@@ -29,8 +29,10 @@ export async function GET(req: NextRequest) {
             
             if (authUserData?.user) {
               // Check if user is banned
-              const bannedUntil = authUserData.user.banned_until;
-              const appMetadata = authUserData.user.app_metadata || {};
+              // Access banned_until from user object (may not be in TypeScript types)
+              const userData = authUserData.user as any;
+              const bannedUntil = userData.banned_until;
+              const appMetadata = userData.app_metadata || {};
               
               // User is blocked if:
               // 1. banned_until exists and is in the future, OR
