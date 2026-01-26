@@ -29,6 +29,9 @@ import { FacultyRender } from "@/components/dashboardComps/FacultyRender";
 import { StudentRender } from "@/components/dashboardComps/StudentRender";
 import { ClubsRender } from "@/components/dashboardComps/ClubsRender";
 import { DepartmentRender } from "@/components/dashboardComps/DepartmentRender";
+import ClubStats from "@/components/ClubStats";
+import ReportGeneration from "@/components/ReportGeneration";
+import Settings from "@/components/Settings";
 
 interface Club {
   club_id: string;
@@ -360,9 +363,9 @@ function DashboardContent() {
             <TabsContent value="department">
               {deptId ? <DepartmentPrivate key={deptId} deptId={deptId} /> : <div>Please select a department to manage.</div>}
             </TabsContent>
-            <TabsContent value="stats">{renderFaculty()}</TabsContent>
-            <TabsContent value="report">{renderFaculty()}</TabsContent>
-            <TabsContent value="settings">{renderFaculty()}</TabsContent>
+            <TabsContent value="stats"><ClubStats /></TabsContent>
+            <TabsContent value="report"><ReportGeneration /></TabsContent>
+            <TabsContent value="settings"><Settings /></TabsContent>
           </Tabs>
         </div>
       </SidebarInset>

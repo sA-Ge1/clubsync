@@ -2,7 +2,7 @@
 import { Mail } from 'lucide-react';
 import { Github, Globe } from 'lucide-react';
 import Link from 'next/link';
-
+import { usePathname } from "next/navigation";
 const Footer = () => {
   const exploreLinks = [
     { name: 'Home', href: '/' },
@@ -16,7 +16,10 @@ const Footer = () => {
     { name: 'Contact', href: '/contact' },
     { name: 'Support', href: '/support' },
   ];
-
+  const pathName=usePathname();
+  if (pathName=="/dashboard"){
+    return null;
+  }
   return (
     <footer className="relative border-t w-full border-border bg-background text-foreground">
       <div className="max-w-7xl mx-auto px-6 py-10">

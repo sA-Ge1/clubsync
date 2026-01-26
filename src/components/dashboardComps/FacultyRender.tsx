@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
@@ -73,6 +73,8 @@ export function FacultyRender({
   const [uploadingFaculty, setUploadingFaculty] = useState(false);
   const [facultyForm, setFacultyForm] = useState<Partial<Faculty>>({});
   const [facultyFile, setFacultyFile] = useState<File | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const firstInputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredFaculty = faculty.filter((f) => {
     const q = facultySearch.trim().toLowerCase();
@@ -266,9 +268,10 @@ export function FacultyRender({
           <CardTitle>Faculty</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div ref={formRef} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Input
               placeholder="Faculty ID *"
+              ref={firstInputRef}
               value={facultyForm.faculty_id ?? ""}
               onChange={(e) => setFacultyForm((p) => ({ ...p, faculty_id: e.target.value }))}
             />
@@ -379,7 +382,11 @@ export function FacultyRender({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setFacultyForm(f)}
+                    onClick={() => {
+                      setFacultyForm(f);
+                      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      firstInputRef.current?.focus();
+                    }}
                       disabled={savingFaculty || !!deletingFacultyId}
                     >
                       Edit

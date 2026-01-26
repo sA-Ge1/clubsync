@@ -14,7 +14,6 @@ import {
   InputOTPSeparator,
 } from "@/components/ui/input-otp";
 import { motion, AnimatePresence } from "framer-motion";
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import {
   Select,
@@ -434,24 +433,13 @@ export default function SignUpPage() {
   
 
   return (
-    <div>
+    <div className="flex items-center justify-center min-h-screen w-full">
       <motion.div 
         className="flex mt-15 w-full items-center justify-center p-6 md:p-10 mb-10"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
       >
-        <motion.div 
-          className="absolute top-20 left-4"
-          variants={itemVariants}
-        >
-          <InteractiveHoverButton 
-            className="z-3 border-2 border-border backdrop-blur-sm"
-            onClick={() => router.push('/')}
-          >
-            Back
-          </InteractiveHoverButton>
-        </motion.div>
         
         <motion.div 
           className="w-full max-w-sm"
@@ -469,7 +457,7 @@ export default function SignUpPage() {
                       className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent"
                       variants={itemVariants}
                     >
-                      Sign-Up
+                      Sign up
                     </motion.h1>
                     <motion.p 
                       className="text-balance text-muted-foreground"

@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/input-otp";
 import { motion, AnimatePresence } from "framer-motion";
 import GoogleIcon from '@mui/icons-material/Google';
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { useUserInfo } from "@/hooks/useUserInfo";
 // Animation variants
 const containerVariants = {
@@ -245,24 +244,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div>
+    <div className="flex items-center justify-center min-h-screen w-full">
     <motion.div 
       className="flex mt-15 w-full items-center justify-center p-6 md:p-10"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <motion.div 
-        className="absolute top-20 left-4"
-        variants={itemVariants}
-      >
-        <InteractiveHoverButton 
-          className="z-3 border-2 border-border backdrop-blur-sm"
-          onClick={() => router.push('/')}
-        >
-          Back
-        </InteractiveHoverButton>
-      </motion.div>
       
       <motion.div 
         className="w-full max-w-sm"

@@ -5,15 +5,17 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
 const menuItems = [
-  { name: "Home", href: "/", description: "Back to the main page" },
-  { name: "Student", href: "/student", description: "Visit student dasboard(for students)" },
-  { name: "Clubs", href: "/clubs", description: "Visit all clubs and view info." },
-  { name: "Inventory", href: "/inventory", description: "Check out the inventory present" },
-  { name: "Sign Up", href: "/signup", description: "Create your account" },
-  { name: "Departments", href: "/departments", description: "View departments and faculty members" },
-  { name: "Features", href: "/#features", description: "Explore all features" },
-  { name: "Support", href: "/support", description: "Get help" },
-  { name: "Contact", href: "/contact", description: "Get in touch with devs" },
+  { name: "Home", href: "/", description: "Back To Home Page" },
+  { name: "Student", href: "/student", description: "Visit Student Dasboard(for students)" },
+  { name: "Clubs", href: "/clubs", description: "Visit All Clubs and View Basic Info" },
+  { name: "Inventory", href: "/inventory", description: "Browse Through Inventory present" },
+  { name: "Admin", href: "/dashboard", description: "Admin Dashboard For Complete Access" },
+  { name: "Login", href: "/login", description: "Login To Your Account" },
+  { name: "Sign up", href: "/signup", description: "Create New Account" },
+  { name: "Departments", href: "/departments", description: "View Departments And Faculty Members" },
+  { name: "Features", href: "/#features", description: "Explore All Features" },
+  { name: "Support", href: "/support", description: "Get Help" },
+  { name: "Contact", href: "/contact", description: "Get In Touch With Devs" },
 ];
 
 export default function MenuTable() {

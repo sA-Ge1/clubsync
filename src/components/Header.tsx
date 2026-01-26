@@ -26,9 +26,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@radix-ui/react-dropdown-menu";
 
 /* ---------------------------------------------
    Helpers
@@ -99,7 +101,7 @@ export default function Header() {
             className="text-lg font-semibold"
             onClick={() => router.push("/")}
           >
-            Clubsync
+            ClubSync
           </Button>
         }
         rightSlot={
@@ -125,6 +127,26 @@ export default function Header() {
                   sideOffset={20}
                   className="z-[6000]"
                 >
+                 <DropdownMenuItem className="focus:bg-transparent">
+                  <table className="text-sm w-full border-collapse">
+                    <tbody>
+                      <tr>
+                        <td className="pr-2 font-medium text-muted-foreground">Name</td>
+                        <td className="font-semibold capitalize">{user.name}</td>
+                      </tr>
+                      <tr>
+                        <td className="pr-2 font-medium text-muted-foreground">Role</td>
+                        <td className="font-semibold capitalize">{user.role}</td>
+                      </tr>
+                      <tr>
+                        <td className="pr-2 font-medium text-muted-foreground">ID</td>
+                        <td className="font-mono text-xs">{user.user_id}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="text-foreground"/>
+
 
                   <DropdownMenuItem
                     onClick={async () => {

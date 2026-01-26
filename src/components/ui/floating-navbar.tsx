@@ -32,9 +32,16 @@ export const FloatingNav = ({
   className,
 }: FloatingNavProps) => {
   const { scrollYProgress } = useScroll();
+
   const [visible, setVisible] = useState(true);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [canScroll, setCanScroll] = useState(true);
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollEndTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  /* ---------------- helpers ---------------- */
 
   const clearHideTimer = () => {
     if (hideTimeoutRef.current) {
@@ -42,77 +49,92 @@ export const FloatingNav = ({
       hideTimeoutRef.current = null;
     }
   };
-  
+
   const startIdleHideTimer = () => {
+    if (!canScroll || isInteracting || isScrolling) return;
+
     clearHideTimer();
-  
     hideTimeoutRef.current = setTimeout(() => {
-      if (!isInteracting) {
-        setVisible(false);
-      }
+      setVisible(false);
     }, 2000);
   };
-  
-  const showHeader = () => {
-    clearHideTimer();
-    setVisible(true);
-    startIdleHideTimer(); // auto-hide ONLY if idle
-  };
-  
-  const hideHeaderImmediately = () => {
-    clearHideTimer();
-    setVisible(false);
-  };
-  
+
+  /* ---------------- detect scrollability ---------------- */
+
+  useEffect(() => {
+    const checkScrollable = () => {
+      setCanScroll(
+        document.documentElement.scrollHeight >
+          window.innerHeight + 4
+      );
+    };
+
+    checkScrollable();
+    window.addEventListener("resize", checkScrollable);
+    return () => window.removeEventListener("resize", checkScrollable);
+  }, []);
+
+  /* ---------------- force visible on short pages ---------------- */
+
+  useEffect(() => {
+    if (!canScroll) {
+      clearHideTimer();
+      setVisible(true);
+    }
+  }, [canScroll]);
+
+  /* ---------------- scroll logic ---------------- */
+
   useMotionValueEvent(scrollYProgress, "change", (current) => {
-    if (typeof current !== "number") return;
-  
+    if (!canScroll || typeof current !== "number") return;
+
     const prev = scrollYProgress.getPrevious() ?? current;
     const direction = current - prev;
-  
-    // Ignore micro scroll noise
+
     if (Math.abs(direction) < 0.002) return;
-  
+
+    setIsScrolling(true);
+    clearHideTimer();
+
+    if (scrollEndTimeoutRef.current) {
+      clearTimeout(scrollEndTimeoutRef.current);
+    }
+
+    scrollEndTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+      startIdleHideTimer();
+    }, 150);
+
     if (direction > 0) {
-      // ⬇ scrolling down → hide immediately
-      hideHeaderImmediately();
+      // ⬇ scroll down → hide immediately
+      setVisible(false);
     } else {
-      // ⬆ scrolling up → show + start idle timer
-      showHeader();
+      // ⬆ scroll up → show
+      setVisible(true);
     }
   });
-  useEffect(() => {
-    if (!visible) return;
+
+  /* ---------------- interaction handling ---------------- */
+
+  const beginInteraction = () => {
+    setIsInteracting(true);
+    clearHideTimer();
+  };
+
+  const endInteraction = () => {
+    setIsInteracting(false);
     startIdleHideTimer();
-    return () => {
-      clearHideTimer();
-    };
-  }, [visible]);
-  
+  };
+
 
   return (
     <AnimatePresence>
       <motion.div
-      onMouseEnter={() => {
-        setIsInteracting(true);
-        clearHideTimer();
-      }}
-      onMouseLeave={() => {
-        setIsInteracting(false);
-        startIdleHideTimer();
-      }}
-      onTouchStart={() => {
-        setIsInteracting(true);
-        clearHideTimer();
-      }}
-      onFocusCapture={() => {
-        setIsInteracting(true);
-        clearHideTimer();
-      }}
-      onBlurCapture={() => {
-        setIsInteracting(false);
-        startIdleHideTimer();
-      }}
+      onMouseEnter={beginInteraction}
+      onMouseLeave={endInteraction}
+      onTouchStart={beginInteraction}
+      onFocusCapture={beginInteraction}
+      onBlurCapture={endInteraction}
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: visible ? 0 : -100, opacity: visible ? 1 : 0 }}
         transition={{ duration: 0.2 }}

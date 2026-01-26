@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
@@ -74,6 +74,8 @@ export function StudentRender({
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [studentForm, setStudentForm] = useState<Partial<Student>>({});
   const [studentFile, setStudentFile] = useState<File | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const firstInputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredStudents = students.filter((s) => {
     const q = studentSearch.trim().toLowerCase();
@@ -274,10 +276,11 @@ export function StudentRender({
           <CardTitle>Students</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div ref={formRef} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Input
               placeholder="USN *"
               className="uppercase"
+              ref={firstInputRef}
               value={studentForm.usn ?? ""}
               onChange={(e) => setStudentForm((p) => ({ ...p, usn: e.target.value }))}
             />
@@ -400,7 +403,11 @@ export function StudentRender({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setStudentForm(s)}
+                    onClick={() => {
+                      setStudentForm(s);
+                      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      firstInputRef.current?.focus();
+                    }}
                       disabled={savingStudent || !!deletingStudentId}
                     >
                       Edit

@@ -476,6 +476,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
         .single();
 
       if (studentError || !student) {
+        setIsAddingMember(false);
         toast.error("Student not found");
         return;
       }
@@ -490,6 +491,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
 
       if (existing) {
         toast.error("Student is already a member");
+        setIsAddingMember(false);
         return;
       }
 
@@ -510,6 +512,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
     } catch (error: any) {
       console.error("Error adding member:", error);
       toast.error(error.message || "Failed to add member");
+      setIsAddingMember(false);
     }
     setIsAddingMember(false);
   };
@@ -1248,6 +1251,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                         }}
                       />
                     </TableHead>
+                    <TableHead>Sl.no</TableHead>
                     <TableHead>USN</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
@@ -1262,8 +1266,9 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredAndSortedMembers.map((member) => (
+                    filteredAndSortedMembers.map((member,i) => (
                       <TableRow key={member.member_id}>
+                        
                         <TableCell>
                           <input
                             type="checkbox"
@@ -1279,6 +1284,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                             }}
                           />
                         </TableCell>
+                        <TableCell>{i+1}</TableCell>
                         <TableCell>{member.usn}</TableCell>
                         <TableCell>{member.name}</TableCell>
                         <TableCell>{member.email}</TableCell>

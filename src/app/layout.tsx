@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import "./globals.css";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Clubsync",
+  title: "ClubSync",
   description: "The all-in-one platform for managing your club, inventory, and member requests. Streamline operations and focus on what matters most.",
 };
 
@@ -33,7 +34,7 @@ export default function RootLayout({
         <ClientProviders>
           <Header/>
           {children}
-          {/* <Footer/> */}
+          <Footer/>
         </ClientProviders>
       </body>
     </html>
