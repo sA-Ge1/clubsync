@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { FileUpload } from "@/components/ui/file-upload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -230,6 +231,20 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
   const [fundTypeFilter, setFundTypeFilter] = useState<"all" | "expenditure" | "income">("all");
   const [fundCreditFilter] = useState<"all" | "credit" | "debit">("all");
   const [fundsView, setFundsView] = useState<FundsViewType>("table");
+  const [fundDocuments, setFundDocuments] = useState<File[]>([]);
+  const [fundDetailDialogOpen, setFundDetailDialogOpen] = useState(false);
+  const [selectedFund, setSelectedFund] = useState<Fund | null>(null);
+  const [selectedFundDocuments, setSelectedFundDocuments] = useState<
+    {
+      id: string;
+      file_name: string;
+      file_path: string;
+      mime_type: string;
+      file_size: number;
+      public_url: string;
+    }[]
+  >([]);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (userLoading) return;
@@ -853,6 +868,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
   };
 
   const openFundDialog = async (fund?: Fund) => {
+    setFundDocuments([]);
     if (fund) {
       setEditingFund(fund);
       // Get the USN from the submitted_by member_id
@@ -896,6 +912,160 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
     setFundsDialogOpen(true);
   };
 
+  const openFundDetailDialog = async (fund: Fund) => {
+    setSelectedFund(fund);
+    setSelectedFundDocuments([]);
+    setFundDetailDialogOpen(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("fund_documents")
+        .select("id, file_name, file_path, mime_type, file_size")
+        .eq("fund_id", fund.fund_id)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const docs = data || [];
+
+      const withUrls = await Promise.all(
+        docs.map(async (doc: any) => {
+          const { data: signed, error: signedError } = await supabase.storage
+            .from("fund-documents")
+            .createSignedUrl(doc.file_path, 60 * 60); // 1 hour
+
+          if (signedError) {
+            console.error("Error generating signed URL:", signedError);
+          }
+
+          return {
+            id: doc.id,
+            file_name: doc.file_name,
+            file_path: doc.file_path,
+            mime_type: doc.mime_type,
+            file_size: doc.file_size,
+            public_url: signed?.signedUrl || "",
+          };
+        })
+      );
+
+      setSelectedFundDocuments(withUrls);
+    } catch (error) {
+      console.error("Error loading fund documents:", error);
+      toast.error("Failed to load supporting documents");
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string, fundId: string) => {
+    if (deletingDocumentId) return;
+    
+    setDeletingDocumentId(documentId);
+    try {
+      const { error } = await supabase
+        .from("fund_documents")
+        .update({ is_deleted: true })
+        .eq("id", documentId);
+
+      if (error) throw error;
+
+      toast.success("Document deleted successfully");
+      
+      // Refresh the document list
+      const { data, error: fetchError } = await supabase
+        .from("fund_documents")
+        .select("id, file_name, file_path, mime_type, file_size")
+        .eq("fund_id", fundId)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      const docs = data || [];
+      const withUrls = await Promise.all(
+        docs.map(async (doc: any) => {
+          const { data: signed, error: signedError } = await supabase.storage
+            .from("fund-documents")
+            .createSignedUrl(doc.file_path, 60 * 60);
+
+          if (signedError) {
+            console.error("Error generating signed URL:", signedError);
+          }
+
+          return {
+            id: doc.id,
+            file_name: doc.file_name,
+            file_path: doc.file_path,
+            mime_type: doc.mime_type,
+            file_size: doc.file_size,
+            public_url: signed?.signedUrl || "",
+          };
+        })
+      );
+
+      setSelectedFundDocuments(withUrls);
+    } catch (error: any) {
+      console.error("Error deleting document:", error);
+      toast.error(error.message || "Failed to delete document");
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
+  const uploadFundDocuments = async (fundId: string, files: File[]) => {
+    if (!files.length || !clubData || !user?.auth_id) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log("session:", sessionData.session);
+
+    const MAX_BYTES = 10 * 1024 * 1024; // 10MB
+
+    for (const file of files) {
+      if (file.type !== "application/pdf") {
+        toast.error("Only PDF files are allowed for supporting documents");
+        continue;
+      }
+      if (file.size > MAX_BYTES) {
+        toast.error(`File "${file.name}" exceeds 10MB limit`);
+        continue;
+      }
+
+      const ext = file.name.includes(".") ? file.name.split(".").pop() : "pdf";
+      const safeName = file.name.replace(/\s+/g, "-");
+      const path = `${fundId}/${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from("fund-documents")
+        .upload(path, file, {
+          upsert: false,
+          contentType: file.type || "application/pdf",
+        });
+
+      if (error) {
+        console.error("Error uploading fund document:", error);
+        toast.error("Failed to upload supporting document");
+        continue;
+      }
+
+      const { error: metaError } = await supabase
+        .from("fund_documents")
+        .insert({
+          fund_id: fundId,
+          file_name: safeName,
+          file_path: data.path,
+          mime_type: file.type || "application/pdf",
+          file_size: file.size,
+          uploaded_by: user.auth_id,
+        });
+
+      if (metaError) {
+        console.error("Error saving fund document metadata:", metaError);
+        toast.error("Uploaded file, but failed to save metadata");
+      }
+    }
+  };
+
   const handleSaveFund = async () => {
     if (isSavingFund) return;
     if (!fundForm.name.trim() || !clubData || fundForm.amount <= 0) {
@@ -903,25 +1073,26 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
       return;
     }
 
-    if (!fundForm.submitted_by_usn.trim()) {
-      toast.error("Please enter the student USN");
-      return;
-    }
-
     setIsSavingFund(true);
     try {
-      // Get member_id from USN and club_id
-      const { data: membership, error: membershipError } = await supabase
-        .from("memberships")
-        .select("member_id")
-        .eq("club_id", clubData.club_id)
-        .eq("usn", fundForm.submitted_by_usn.trim().toUpperCase())
-        .single();
+      // Get member_id from USN and club_id (only if USN is provided)
+      let submittedByMemberId: string | null = null;
+      
+      if (fundForm.submitted_by_usn.trim()) {
+        const { data: membership, error: membershipError } = await supabase
+          .from("memberships")
+          .select("member_id")
+          .eq("club_id", clubData.club_id)
+          .eq("usn", fundForm.submitted_by_usn.trim().toUpperCase())
+          .single();
 
-      if (membershipError || !membership) {
-        toast.error("Student USN not found in club members. Please check the USN.");
-        setIsSavingFund(false);
-        return;
+        if (membershipError || !membership) {
+          toast.error("Student USN not found in club members. Please check the USN or leave it blank.");
+          setIsSavingFund(false);
+          return;
+        }
+        
+        submittedByMemberId = membership.member_id;
       }
 
       if (editingFund) {
@@ -935,27 +1106,41 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
             is_credit: fundForm.is_credit,
             type: fundForm.type,
             bill_date: fundForm.bill_date || null,
-            submitted_by: membership.member_id,
+            submitted_by: submittedByMemberId,
           })
           .eq("fund_id", editingFund.fund_id);
 
         if (error) throw error;
+
+        if (fundDocuments.length > 0) {
+          await uploadFundDocuments(editingFund.fund_id, fundDocuments);
+        }
+
         toast.success("Fund updated successfully");
       } else {
         // Create new
-        const { error } = await supabase.from("funds").insert({
-          club_id: clubData.club_id,
-          name: fundForm.name,
-          amount: fundForm.amount,
-          description: fundForm.description || null,
-          is_credit: fundForm.is_credit,
-          type: fundForm.type,
-          bill_date: fundForm.bill_date || null,
-          submitted_by: membership.member_id,
-          is_trashed: false,
-        });
+        const { data: inserted, error } = await supabase
+          .from("funds")
+          .insert({
+            club_id: clubData.club_id,
+            name: fundForm.name,
+            amount: fundForm.amount,
+            description: fundForm.description || null,
+            is_credit: fundForm.is_credit,
+            type: fundForm.type,
+            bill_date: fundForm.bill_date || null,
+            submitted_by: submittedByMemberId,
+            is_trashed: false,
+          })
+          .select("fund_id")
+          .single();
 
         if (error) throw error;
+
+        if (inserted && fundDocuments.length > 0) {
+          await uploadFundDocuments(inserted.fund_id, fundDocuments);
+        }
+
         toast.success("Fund added successfully");
       }
 
@@ -970,6 +1155,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
         bill_date: "",
         submitted_by_usn: "",
       });
+      setFundDocuments([]);
       fetchFunds(clubData.club_id);
     } catch (error: any) {
       console.error("Error saving fund:", error);
@@ -1251,7 +1437,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                         }}
                       />
                     </TableHead>
-                    <TableHead>Sl.no</TableHead>
+                    <TableHead>Sl.No</TableHead>
                     <TableHead>USN</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
@@ -1261,7 +1447,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                 <TableBody>
                   {filteredAndSortedMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
                         {searchQuery.trim() ? "No members found" : "No members yet"}
                       </TableCell>
                     </TableRow>
@@ -1467,6 +1653,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Sl.No</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Quantity</TableHead>
@@ -1479,13 +1666,14 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                 <TableBody>
                   {inventory.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         No inventory items yet
                       </TableCell>
                     </TableRow>
                   ) : (
-                    inventory.map((item) => (
+                    inventory.map((item, i) => (
                       <TableRow key={item.inventory_id}>
+                        <TableCell>{i + 1}</TableCell>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>{item.description || "-"}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
@@ -1633,6 +1821,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Sl.No</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Quantity</TableHead>
@@ -1646,15 +1835,16 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                 <TableBody>
                   {filteredAndSortedRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         {requests.length === 0
                           ? "No requests yet"
                           : "No requests match the current filters"}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredAndSortedRequests.map((request) => (
+                    filteredAndSortedRequests.map((request, i) => (
                       <TableRow key={request.transaction_id}>
+                        <TableCell>{i + 1}</TableCell>
                         <TableCell>{request.name}</TableCell>
                         <TableCell>{request.inventory_name}</TableCell>
                         <TableCell>{request.quantity}</TableCell>
@@ -1744,9 +1934,11 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                     Manage your club's income and expenditure records.
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex gap-1 border rounded-md p-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0">
+                  {/* View Toggle */}
+                  <div className="flex flex-wrap gap-1 border rounded-md p-1 min-w-0">
                     <Button
+                      className="flex-shrink-0"
                       variant={fundsView === "table" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => setFundsView("table")}
@@ -1754,7 +1946,9 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                       <IndianRupee className="h-4 w-4 mr-2" />
                       Table
                     </Button>
+
                     <Button
+                      className="flex-shrink-0"
                       variant={fundsView === "statistics" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => setFundsView("statistics")}
@@ -1763,15 +1957,18 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                       Statistics
                     </Button>
                   </div>
+
+                  {/* New Fund Button */}
                   {fundsView === "table" && (
                     <Dialog open={fundsDialogOpen} onOpenChange={setFundsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => openFundDialog()}>
-                      <Plus className="h-4 w-4" />
-                      New Fund
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                      <DialogTrigger asChild>
+                        <Button className="flex-shrink-0">
+                          <Plus className="h-4 w-4 mr-1" />
+                          New
+                        </Button>
+                      </DialogTrigger>
+
+                      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {editingFund ? "Edit Fund" : "Add New Fund"}
@@ -1865,8 +2062,19 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                           rows={3}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label className="p-2">Supporting Documents (optional)</Label>
+                        <FileUpload
+                          onChange={(files) => setFundDocuments(files)}
+                          acceptTypes={["application/pdf", "image/*"]}
+                          maxFiles={5}
+                        />
+                        <p className="text-xs text-muted-foreground px-2">
+                          Upload bills, receipts, or any supporting PDFs (max 10Mb) for this fund entry.
+                        </p>
+                      </div>
                       <div>
-                        <Label htmlFor="fund-submitted-by-usn" className="p-2">Submitted By (USN) *</Label>
+                        <Label htmlFor="fund-submitted-by-usn" className="p-2">Submitted By (USN) </Label>
                         <Input
                           id="fund-submitted-by-usn"
                           value={fundForm.submitted_by_usn}
@@ -2012,6 +2220,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Sl.No</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Amount</TableHead>
@@ -2025,15 +2234,16 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                 <TableBody>
                   {filteredAndSortedFunds.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         {funds.length === 0
                           ? "No funds yet"
                           : "No funds match the current filters"}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredAndSortedFunds.map((fund) => (
+                    filteredAndSortedFunds.map((fund, i) => (
                       <TableRow key={fund.fund_id}>
+                        <TableCell>{i + 1}</TableCell>
                         <TableCell className="font-medium">{fund.name || "-"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">
@@ -2111,6 +2321,13 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openFundDetailDialog(fund)}
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -2335,6 +2552,172 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                 Close
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Fund Detail Dialog */}
+        <Dialog open={fundDetailDialogOpen} onOpenChange={setFundDetailDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Fund Details</DialogTitle>
+              <DialogDescription>
+                View full information and supporting documents for this fund entry.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedFund && (
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Name
+                    </Label>
+                    <p className="text-sm font-semibold mt-1">
+                      {selectedFund.name || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Type
+                    </Label>
+                    <p className="text-sm mt-1">
+                      {getFundTypeLabel(selectedFund.type)}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Amount
+                    </Label>
+                    <p className="text-sm font-semibold mt-1">
+                      {formatCurrency(selectedFund.amount || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Transaction
+                    </Label>
+                    <div className="mt-1">
+                      {selectedFund.is_credit ? (
+                        <Badge variant="default" className="bg-green-600 text-white">
+                          <ArrowUpCircle className="h-3 w-3 mr-1" />
+                          Credit (Income)
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-red-600 text-white">
+                          <ArrowDownCircle className="h-3 w-3 mr-1" />
+                          Debit (Expenditure)
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Bill Date
+                    </Label>
+                    <p className="text-sm mt-1">
+                      {selectedFund.bill_date
+                        ? new Date(selectedFund.bill_date).toLocaleDateString()
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Submitted By
+                    </Label>
+                    <p className="text-sm mt-1 text-muted-foreground">
+                      {selectedFund.submitted_by_name || "Unknown"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Description
+                  </Label>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">
+                    {selectedFund.description || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Supporting Documents
+                  </Label>
+                  {selectedFundDocuments.length > 0 ? (
+                    <ul className="mt-2 space-y-2">
+                      {selectedFundDocuments.map((doc, index) => (
+                        <li
+                          key={doc.id}
+                          className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate font-medium">
+                              {doc.file_name || `Document ${index + 1}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {(doc.file_size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              <a
+                                href={doc.public_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                View
+                              </a>
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  disabled={deletingDocumentId === doc.id}
+                                >
+                                  {deletingDocumentId === doc.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{doc.file_name}"? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteDocument(doc.id, selectedFund!.fund_id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm mt-2 text-muted-foreground">
+                      No supporting documents uploaded for this fund.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

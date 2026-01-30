@@ -340,6 +340,7 @@ export function DepartmentPrivate({deptId}:{deptId?:string}) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Sl.No</TableHead>
                     <TableHead>Student</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Club</TableHead>
@@ -351,8 +352,9 @@ export function DepartmentPrivate({deptId}:{deptId?:string}) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendingRequests.map((request) => (
+                  {pendingRequests.map((request, i) => (
                     <TableRow key={request.request_id}>
+                      <TableCell>{i + 1}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{request.student_name}</div>
@@ -442,6 +444,7 @@ export function DepartmentPrivate({deptId}:{deptId?:string}) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Sl.No</TableHead>
                     <TableHead>Student</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Club</TableHead>
@@ -452,8 +455,9 @@ export function DepartmentPrivate({deptId}:{deptId?:string}) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {otherRequests.map((request) => (
+                  {otherRequests.map((request, i) => (
                     <TableRow key={request.request_id}>
+                      <TableCell>{i + 1}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{request.student_name}</div>

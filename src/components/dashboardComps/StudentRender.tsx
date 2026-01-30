@@ -383,7 +383,7 @@ export function StudentRender({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sl.no</TableHead>
+                <TableHead>Sl.No</TableHead>
                 <TableHead>USN</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>

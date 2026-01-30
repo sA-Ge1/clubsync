@@ -713,6 +713,7 @@ export default function AdminPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Sl.No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Technical</TableHead>
@@ -720,8 +721,9 @@ export default function AdminPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredClubs.map((c) => (
+            {filteredClubs.map((c, i) => (
               <TableRow key={c.club_id}>
+                <TableCell>{i + 1}</TableCell>
                 <TableCell>{c.name}</TableCell>
                 <TableCell>{c.email ?? "-"}</TableCell>
                 <TableCell>
@@ -843,14 +845,16 @@ export default function AdminPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Sl.No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>HOD</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDepartments.map((d) => (
+            {filteredDepartments.map((d, i) => (
               <TableRow key={d.dept_id}>
+                <TableCell>{i + 1}</TableCell>
                 <TableCell>{d.name}</TableCell>
                 <TableCell>{d.hod ?? "-"}</TableCell>
                 <TableCell className="flex gap-2">
@@ -997,6 +1001,7 @@ export default function AdminPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Sl.No</TableHead>
               <TableHead>USN</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
@@ -1005,8 +1010,9 @@ export default function AdminPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((s) => (
+            {filteredStudents.map((s, i) => (
               <TableRow key={s.usn}>
+                <TableCell>{i + 1}</TableCell>
                 <TableCell>{s.usn}</TableCell>
                 <TableCell>{s.name}</TableCell>
                 <TableCell>{s.email}</TableCell>
@@ -1139,6 +1145,7 @@ export default function AdminPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Sl.No</TableHead>
               <TableHead>ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
@@ -1146,8 +1153,9 @@ export default function AdminPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredFaculty.map((f) => (
+            {filteredFaculty.map((f, i) => (
               <TableRow key={f.faculty_id}>
+                <TableCell>{i + 1}</TableCell>
                 <TableCell>{f.faculty_id}</TableCell>
                 <TableCell>{f.name}</TableCell>
                 <TableCell>{f.email ?? "-"}</TableCell>

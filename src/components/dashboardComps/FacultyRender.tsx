@@ -364,7 +364,7 @@ export function FacultyRender({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sl.no</TableHead>
+                <TableHead>Sl.No</TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>

@@ -4,14 +4,9 @@ import { useMemo, useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
-  LineChart,
-  Line,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,7 +18,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { formatCurrency, formatCurrencyAxis } from "@/lib/utils";
-import { Users, TrendingUp, Calendar, DollarSign, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Users, TrendingUp, Calendar, ArrowUpCircle, ArrowDownCircle, IndianRupee } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
@@ -276,7 +271,7 @@ export default function ClubStats() {
   return (
     <div className="space-y-6">
       {/* Time Period Selector */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4" />
           <span className="text-sm font-medium">Time Period:</span>
@@ -359,7 +354,7 @@ export default function ClubStats() {
         </CardHeader>
         <CardContent>
           {memberCountData.length > 0 ? (
-            <ChartContainer config={CHART_CONFIG}>
+            <ChartContainer config={CHART_CONFIG} className="h-full w-full p-5 overflow-hidden">
               <BarChart
                 accessibilityLayer
                 data={memberCountData}
@@ -410,127 +405,126 @@ export default function ClubStats() {
         </CardContent>
       </Card>
 
-      {/* Income Comparison */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Income Comparison
-          </CardTitle>
-          <CardDescription>
-            Total income per club for selected period (Top 20 clubs)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {incomeComparisonData.length > 0 ? (
-            <ChartContainer config={CHART_CONFIG}>
-              <BarChart
-                accessibilityLayer
-                data={incomeComparisonData}
-                barSize={24}
-                layout="vertical"
-                margin={{
-                  left: 8,
-                  right: 8,
-                }}
-              >
-                <CartesianGrid horizontal={false} />
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  width={150}
-                />
-                <XAxis
-                  type="number"
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => formatCurrencyAxis(value)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value) => [
-                        formatCurrency(Number(value)),
-                        ""
-                      ]}
-                    />
-                  }
-                />
-                <Bar dataKey="income" fill="var(--color-income)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-              No income data available for selected period
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Income Comparison */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Income Comparison
+            </CardTitle>
+            <CardDescription>
+              Total income per club for selected period (Top 20 clubs)
+            </CardDescription>
+          </CardHeader>
 
-      {/* Expenditure Comparison */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Expenditure Comparison
-          </CardTitle>
-          <CardDescription>
-            Total expenditure per club for selected period (Top 20 clubs)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {expenditureComparisonData.length > 0 ? (
-            <ChartContainer config={CHART_CONFIG}>
-              <BarChart
-                accessibilityLayer
-                data={expenditureComparisonData}
-                layout="vertical"
-                barSize={24}
-                margin={{
-                  left: 8,
-                  right: 8,
-                }}
-              >
-                <CartesianGrid horizontal={false} />
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  width={150}
-                />
-                <XAxis
-                  type="number"
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => formatCurrencyAxis(value)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value) => [
-                        formatCurrency(Number(value)),
-                        ""
-                      ]}
-                    />
-                  }
-                />
-                <Bar dataKey="expenditure" fill="var(--color-expenditure)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-              No expenditure data available for selected period
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <CardContent>
+            {incomeComparisonData.length > 0 ? (
+              <ChartContainer config={CHART_CONFIG} className="h-[320px] max-w-full overflow-hidden">
+                <BarChart
+                  data={incomeComparisonData}
+                  layout="vertical"
+                  barSize={24}
+                  barCategoryGap="15%"
+                  margin={{ left: 8, right: 32 }}
+                >
+                  <CartesianGrid horizontal={false} />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    width={100}
+                  />
+                  <XAxis
+                    type="number"
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={formatCurrencyAxis}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => [formatCurrency(Number(value)), ""]}
+                      />
+                    }
+                  />
+                  <Bar
+                    dataKey="income"
+                    fill="var(--color-income)"
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No income data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Expenditure Comparison */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5" />
+              Expenditure Comparison
+            </CardTitle>
+            <CardDescription>
+              Total expenditure per club for selected period (Top 20 clubs)
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            {expenditureComparisonData.length > 0 ? (
+              <ChartContainer config={CHART_CONFIG} className="h-[320px] max-w-full overflow-hidden">
+                <BarChart
+                  data={expenditureComparisonData}
+                  layout="vertical"
+                  barSize={24}
+                  barCategoryGap="15%"
+                  margin={{ left: 8, right: 32 }}
+                >
+                  <CartesianGrid horizontal={false} />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    width={100}
+                  />
+                  <XAxis
+                    type="number"
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={formatCurrencyAxis}
+                    allowDecimals={false}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => [formatCurrency(Number(value)), ""]}
+                      />
+                    }
+                  />
+                  <Bar
+                    dataKey="expenditure"
+                    fill="var(--color-expenditure)"
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No expenditure data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Combined Income vs Expenditure */}
       <Card>

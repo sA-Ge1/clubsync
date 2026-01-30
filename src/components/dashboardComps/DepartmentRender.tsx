@@ -338,7 +338,7 @@ export function DepartmentRender({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sl.no</TableHead>
+                <TableHead>Sl.No</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>HOD</TableHead>
                 <TableHead>Actions</TableHead>

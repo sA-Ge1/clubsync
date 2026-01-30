@@ -164,3 +164,75 @@ html {
   background: transparent;
 }
 
+/* Sidebar hover expansion - expand gap when container is hovered */
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-slot="sidebar-gap"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-slot="sidebar-gap"] {
+  width: var(--sidebar-width) !important;
+}
+
+/* Ensure content is visible on hover */
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="sidebar"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="sidebar"] {
+  overflow: visible !important;
+}
+
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-slot="sidebar-content"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-slot="sidebar-content"] {
+  overflow: auto !important;
+}
+
+/* Show all hidden elements on hover - using more specific selectors */
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="menu-button"] > span:last-child,
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="menu-button"] > span:last-child {
+  display: inline !important;
+  opacity: 1 !important;
+}
+
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="menu-button"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="menu-button"] {
+  width: 100% !important;
+  min-height: 2rem !important;
+  height: auto !important;
+  padding: 0.5rem !important;
+  justify-content: flex-start !important;
+}
+
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="menu-sub"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="menu-sub"] {
+  display: flex !important;
+}
+
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="menu-sub-button"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="menu-sub-button"] {
+  display: flex !important;
+}
+
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="group-label"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="group-label"] {
+  margin-top: 0 !important;
+  opacity: 1 !important;
+  height: 2rem !important;
+}
+
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="menu-action"],
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="menu-badge"],
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="group-action"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="menu-action"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="menu-badge"],
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="group-action"] {
+  display: flex !important;
+}
+
+/* Show header title on hover */
+.group[data-collapsible="icon"]:has([data-slot="sidebar-container"]:hover) [data-sidebar="header"] span,
+.group[data-collapsible="icon"]:has(.sidebar-hover-target:hover) [data-sidebar="header"] span {
+  opacity: 1 !important;
+}
+
+
+.pdf-find-match {
+  background: rgba(255, 230, 0, 0.495);
+  padding: 0.1em 0.05em;
+  border-radius: 2px;
+}
+

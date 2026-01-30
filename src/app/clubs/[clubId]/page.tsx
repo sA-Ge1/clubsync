@@ -286,6 +286,7 @@ export default function ClubPublicPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead>Sl.No</TableHead>
                             <TableHead>USN</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
@@ -293,8 +294,9 @@ export default function ClubPublicPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {members.map((member) => (
+                          {members.map((member, i) => (
                             <TableRow key={member.member_id}>
+                              <TableCell>{i + 1}</TableCell>
                               <TableCell className="font-mono text-xs sm:text-sm">{member.usn}</TableCell>
                               <TableCell>{member.name}</TableCell>
                               <TableCell className="text-xs sm:text-sm">{member.email}</TableCell>
@@ -410,6 +412,7 @@ export default function ClubPublicPage() {
                         <Table>
                           <TableHeader>
                             <TableRow>
+                              <TableHead>Sl.No</TableHead>
                               <TableHead>Name</TableHead>
                               <TableHead>Type</TableHead>
                               <TableHead>Amount</TableHead>
@@ -420,8 +423,9 @@ export default function ClubPublicPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {funds.map((fund) => (
+                            {funds.map((fund, i) => (
                               <TableRow key={fund.fund_id}>
+                                <TableCell>{i + 1}</TableCell>
                                 <TableCell className="font-medium">{fund.name || "-"}</TableCell>
                                 <TableCell>
                                   <Badge variant="secondary">{getFundTypeLabel(fund.type)}</Badge>

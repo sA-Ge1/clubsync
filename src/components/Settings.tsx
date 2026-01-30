@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, Mail, Edit, RefreshCw, Search, Settings as SettingsIcon, Database, Shield, Key, Eye, Ban, Trash2, UserCheck } from "lucide-react";
+import { Users, Mail, Edit, RefreshCw, Search, Settings as SettingsIcon, Database, Shield, Key, Eye, Ban, Trash2, UserCheck, FileText, RotateCcw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -42,6 +42,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 interface AuthUser {
@@ -85,6 +86,27 @@ interface Club {
   name: string;
 }
 
+interface FundDocumentRow {
+  id: string;
+  fund_id: string;
+  file_name: string;
+  file_path: string;
+  mime_type: string;
+  file_size: number;
+  uploaded_by: string | null;
+  created_at: string;
+  is_deleted: boolean;
+  funds?: {
+    fund_id: string;
+    club_id: string;
+    name: string | null;
+    amount: number | null;
+    bill_date: string | null;
+    is_credit: boolean;
+    type: number;
+  } | null;
+}
+
 export default function Settings() {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -105,6 +127,14 @@ export default function Settings() {
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<AuthUser | null>(null);
   const [blockDuration, setBlockDuration] = useState<string>("permanent");
+
+  // Documents (admin)
+  const [documents, setDocuments] = useState<FundDocumentRow[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsTab, setDocumentsTab] = useState<"active" | "trash">("active");
+  const [documentsSearch, setDocumentsSearch] = useState("");
+  const [documentsClubFilter, setDocumentsClubFilter] = useState<string>("all");
+  const [documentActionId, setDocumentActionId] = useState<string | null>(null);
 
   // Fetch all data
   useEffect(() => {
@@ -142,6 +172,180 @@ export default function Settings() {
       toast.error("Failed to load settings data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocuments = async (isDeleted: boolean) => {
+    try {
+      setDocumentsLoading(true);
+      const { data, error } = await supabase
+        .from("fund_documents")
+        .select(
+          `
+          id,
+          fund_id,
+          file_name,
+          file_path,
+          mime_type,
+          file_size,
+          uploaded_by,
+          created_at,
+          is_deleted,
+          funds:fund_id (
+            fund_id,
+            club_id,
+            name,
+            amount,
+            bill_date,
+            is_credit,
+            type
+          )
+        `
+        )
+        .eq("is_deleted", isDeleted)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setDocuments((data as any) || []);
+    } catch (error: any) {
+      console.error("Error fetching documents:", error);
+      toast.error(error.message || "Failed to load documents");
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load documents only when tab is used; harmless to prefetch once too.
+    fetchDocuments(documentsTab === "trash");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentsTab]);
+
+  const filteredDocuments = useMemo(() => {
+    const q = documentsSearch.trim().toLowerCase();
+    return documents.filter((d) => {
+      const clubId = d.funds?.club_id || "";
+      if (documentsClubFilter !== "all" && clubId !== documentsClubFilter) return false;
+
+      if (!q) return true;
+
+      const clubName = clubs.find((c) => c.club_id === clubId)?.name || "";
+      const fundName = d.funds?.name || "";
+      const typeStr = String(d.funds?.type ?? "");
+      const amountStr = String(d.funds?.amount ?? "");
+      return (
+        d.file_name.toLowerCase().includes(q) ||
+        d.file_path.toLowerCase().includes(q) ||
+        clubId.toLowerCase().includes(q) ||
+        clubName.toLowerCase().includes(q) ||
+        fundName.toLowerCase().includes(q) ||
+        typeStr.includes(q) ||
+        amountStr.includes(q)
+      );
+    });
+  }, [documents, documentsSearch, documentsClubFilter, clubs]);
+
+  const openSignedDocument = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("fund-documents")
+        .createSignedUrl(filePath, 60 * 60);
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error("Failed to generate signed URL");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (error: any) {
+      console.error("Error opening signed document:", error);
+      toast.error(error.message || "Failed to open document");
+    }
+  };
+
+  const softDeleteDocument = async (id: string) => {
+    if (documentActionId) return;
+    setDocumentActionId(id);
+    try {
+      const { error } = await supabase
+        .from("fund_documents")
+        .update({ is_deleted: true })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Document moved to recycle bin");
+      await fetchDocuments(false);
+    } catch (error: any) {
+      console.error("Error trashing document:", error);
+      toast.error(error.message || "Failed to trash document");
+    } finally {
+      setDocumentActionId(null);
+    }
+  };
+
+  const restoreDocument = async (id: string) => {
+    if (documentActionId) return;
+    setDocumentActionId(id);
+    try {
+      const { error } = await supabase
+        .from("fund_documents")
+        .update({ is_deleted: false })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Document restored");
+      await fetchDocuments(true);
+    } catch (error: any) {
+      console.error("Error restoring document:", error);
+      toast.error(error.message || "Failed to restore document");
+    } finally {
+      setDocumentActionId(null);
+    }
+  };
+
+  const permanentlyDeleteDocument = async (doc: FundDocumentRow) => {
+    if (documentActionId) return;
+    setDocumentActionId(doc.id);
+    try {
+      const { error: storageError } = await supabase.storage
+        .from("fund-documents")
+        .remove([doc.file_path]);
+      if (storageError) throw storageError;
+
+      const { error } = await supabase.from("fund_documents").delete().eq("id", doc.id);
+      if (error) throw error;
+
+      toast.success("Document permanently deleted");
+      await fetchDocuments(true);
+    } catch (error: any) {
+      console.error("Error permanently deleting document:", error);
+      toast.error(error.message || "Failed to permanently delete document");
+    } finally {
+      setDocumentActionId(null);
+    }
+  };
+
+  const emptyRecycleBin = async () => {
+    if (documentActionId) return;
+    setDocumentActionId("__empty__");
+    try {
+      const trashed = documents;
+      if (trashed.length === 0) {
+        toast.info("Recycle bin is already empty");
+        return;
+      }
+
+      const paths = trashed.map((d) => d.file_path);
+      const { error: storageError } = await supabase.storage
+        .from("fund-documents")
+        .remove(paths);
+      if (storageError) throw storageError;
+
+      const ids = trashed.map((d) => d.id);
+      const { error } = await supabase.from("fund_documents").delete().in("id", ids);
+      if (error) throw error;
+
+      toast.success("Recycle bin emptied");
+      await fetchDocuments(true);
+    } catch (error: any) {
+      console.error("Error emptying recycle bin:", error);
+      toast.error(error.message || "Failed to empty recycle bin");
+    } finally {
+      setDocumentActionId(null);
     }
   };
 
@@ -402,6 +606,10 @@ export default function Settings() {
             <Users className="mr-2 h-4 w-4" />
             User Management
           </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileText className="mr-2 h-4 w-4" />
+            Documents
+          </TabsTrigger>
           <TabsTrigger value="system">
             <SettingsIcon className="mr-2 h-4 w-4" />
             System Settings
@@ -431,6 +639,7 @@ export default function Settings() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Sl.No</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
@@ -441,16 +650,17 @@ export default function Settings() {
                   <TableBody>
                     {filteredUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
                           No users found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredUsers.map((user) => (
+                      filteredUsers.map((user,i) => (
                         <TableRow key={user.id}>
+                          <TableCell>{i+1}</TableCell>
                           <TableCell className="font-medium">{user.email}</TableCell>
                           <TableCell>
-                            <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
+                            <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">{user.role}</Badge>
                           </TableCell>
                           <TableCell>
                             {user.blocked ? (
@@ -557,6 +767,222 @@ export default function Settings() {
 
               <div className="text-sm text-muted-foreground">
                 Total users: {users.length} | Filtered: {filteredUsers.length}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle>Fund Documents</CardTitle>
+                <CardDescription>
+                  View, search, trash/restore, and permanently delete supporting fund documents.
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex gap-1 border rounded-md p-1">
+                  <Button
+                    size="sm"
+                    variant={documentsTab === "active" ? "default" : "ghost"}
+                    onClick={() => setDocumentsTab("active")}
+                  >
+                    Active
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={documentsTab === "trash" ? "default" : "ghost"}
+                    onClick={() => setDocumentsTab("trash")}
+                  >
+                    Recycle Bin
+                  </Button>
+                </div>
+                {documentsTab === "trash" && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={documentsLoading || documentActionId === "__empty__"}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Empty Bin
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Empty recycle bin?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete all trashed documents, including the files from the storage bucket.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={emptyRecycleBin} className="bg-red-600 hover:bg-red-700">
+                          Empty Bin
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fetchDocuments(documentsTab === "trash")}
+                  disabled={documentsLoading}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${documentsLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 w-full sm:max-w-md">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search documents by name, club, fund, amount, type..."
+                    value={documentsSearch}
+                    onChange={(e) => setDocumentsSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Select value={documentsClubFilter} onValueChange={setDocumentsClubFilter}>
+                    <SelectTrigger className="w-[240px]">
+                      <SelectValue placeholder="Filter by club" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clubs</SelectItem>
+                      {clubs.map((c) => (
+                        <SelectItem key={c.club_id} value={c.club_id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Sl.No</TableHead>
+                      <TableHead>File</TableHead>
+                      <TableHead>Club</TableHead>
+                      <TableHead>Fund</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Uploaded</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {documentsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          Loading documents...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredDocuments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          No documents found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredDocuments.map((doc,i) => {
+                        const clubId = doc.funds?.club_id || "-";
+                        const clubName = clubs.find((c) => c.club_id === clubId)?.name || clubId;
+                        const fundLabel = doc.funds?.name || doc.fund_id;
+                        return (
+                          <TableRow key={doc.id}>
+                            <TableCell>{i+1}</TableCell>
+                            <TableCell className="font-medium max-w-[320px]">
+                              <div className="min-w-0">
+                                <p className="truncate">{doc.file_name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{doc.file_path}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-[240px]">
+                              <p className="truncate">{clubName}</p>
+                            </TableCell>
+                            <TableCell className="max-w-[240px]">
+                              <p className="truncate">{fundLabel}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {doc.funds?.amount != null ? `₹${doc.funds.amount}` : "-"}
+                              </p>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {(doc.file_size / (1024 * 1024)).toFixed(2)} MB
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(doc.created_at).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button size="sm" variant="outline" onClick={() => openSignedDocument(doc.file_path)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View
+                                </Button>
+
+                                {documentsTab === "active" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-500 hover:text-red-600"
+                                    disabled={documentActionId === doc.id}
+                                    onClick={() => softDeleteDocument(doc.id)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Trash
+                                  </Button>
+                                ) : (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={documentActionId === doc.id}
+                                      onClick={() => restoreDocument(doc.id)}
+                                    >
+                                      <RotateCcw className="mr-2 h-4 w-4" />
+                                      Restore
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button size="sm" variant="destructive" disabled={documentActionId === doc.id}>
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Permanently delete document?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will delete the file from the private bucket and remove its metadata record.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => permanentlyDeleteDocument(doc)}
+                                            className="bg-red-600 hover:bg-red-700"
+                                          >
+                                            Permanently Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                Total: {documents.length} | Filtered: {filteredDocuments.length}
               </div>
             </CardContent>
           </Card>

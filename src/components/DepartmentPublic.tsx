@@ -282,14 +282,16 @@ export function DepartmentPublic({ deptId }: DepartmentPublicProps) {
                     <Table>
                       <TableHeader>
                         <TableRow className="p-2">
+                          <TableHead>Sl.No</TableHead>
                           <TableHead>FID</TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody >
-                        {faculty.map((f) => (
+                        {faculty.map((f, i) => (
                           <TableRow key={f.faculty_id} className="p-2">
+                            <TableCell className="p-2">{i + 1}</TableCell>
                             <TableCell className="p-2">{f.faculty_id}</TableCell>
                             <TableCell>{f.name}</TableCell>
                             <TableCell className="text-sm">

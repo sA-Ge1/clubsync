@@ -525,6 +525,7 @@ export default function StudentDashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Sl.No</TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead>Club</TableHead>
                       <TableHead>Quantity</TableHead>
@@ -535,8 +536,9 @@ export default function StudentDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {visibleTransactions.map((transaction) => (
+                    {visibleTransactions.map((transaction, i) => (
                       <TableRow key={transaction.transaction_id}>
+                        <TableCell>{i + 1}</TableCell>
                         <TableCell className="font-medium">
                           {transaction.inventory_name}
                         </TableCell>

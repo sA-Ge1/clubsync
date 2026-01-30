@@ -390,7 +390,7 @@ export function ClubsRender({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sl.no</TableHead>
+                <TableHead>Sl.No</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Technical</TableHead>
