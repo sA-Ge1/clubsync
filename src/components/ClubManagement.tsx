@@ -1244,7 +1244,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
           <p className="text-muted-foreground">
             Manage your club members, inventory, and requests
           </p>
-          {user?.role === "admin" && showClubSelector&& (
+          {(user?.role === "admin" || showClubSelector)&& (
             <div className="mt-3 flex gap-3 items-center">
               <p className="text-sm text-muted-foreground">Viewing club:</p>
               <Select
@@ -1254,10 +1254,10 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                   fetchClubData(value);
                 }}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px]" >
                   <SelectValue placeholder="Select club" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start">
                   {availableClubs.map((c) => (
                     <SelectItem key={c.club_id} value={c.club_id}>
                       {c.name}

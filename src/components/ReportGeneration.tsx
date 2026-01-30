@@ -968,7 +968,7 @@ export default function ReportGeneration() {
             <CardDescription>Preview the generated PDF report</CardDescription>
           </CardHeader>
           <CardContent>
-          <PdfViewer file={pdfUrl} name={fileName} />;
+          <PdfViewer file={pdfUrl} name={fileName} />
           </CardContent>
         </Card>
       )}

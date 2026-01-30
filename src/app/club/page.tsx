@@ -12,5 +12,5 @@ export default function ClubPage(){
       );
     
   }
-  return <ClubManagement clubId={user.user_id}/>
+  return <ClubManagement clubId={user.role=="admin"?undefined:user.user_id}/>
 }

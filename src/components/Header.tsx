@@ -31,6 +31,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@radix-ui/react-dropdown-menu";
+import { StaticNav } from "./ui/StaticNave";
 
 /* ---------------------------------------------
    Helpers
@@ -92,13 +93,13 @@ export default function Header() {
 
   return (
     <>
-      <FloatingNav
+      <StaticNav
         navItems={navItems}
         onMobileMenuOpen={() => setMobileOpen(true)}
         leftSlot={
           <Button
             variant="ghost"
-            className="text-lg font-semibold"
+            className="text-xl font-semibold"
             onClick={() => router.push("/")}
           >
             ClubSync

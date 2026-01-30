@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
-import { Download, Printer } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Expand, Minimize, Printer, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 type Match = {
   page: number;
@@ -20,13 +21,13 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
 
   const [pdf, setPdf] = useState<any>(null);
   const [numPages, setNumPages] = useState(0);
+  const didAutoFitRef = useRef(false);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const [toolbarHidden, setToolbarHidden] = useState(false);
 
   const [scale, setScale] = useState(1.2);
-  const [pageWidth, setPageWidth] = useState<number | null>(null);
-  const [pageHeight, setPageHeight] = useState<number | null>(null);
 
   const [pageInput, setPageInput] = useState("1");
-  const [currentPage, setCurrentPage] = useState(1);
 
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<Match[]>([]);
@@ -36,6 +37,44 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
 
   const [zoomInput, setZoomInput] = useState("120");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const pointers = useRef<Map<number, PointerEvent>>(new Map());
+  const lastPinchDistance = useRef<number | null>(null);
+  const clampScale = (value: number) =>
+    Math.min(3, Math.max(0.5, value));
+  
+  const distance = (a: PointerEvent, b: PointerEvent) =>
+    Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  const onPointerDown = (e: React.PointerEvent) => {
+    pointers.current.set(e.pointerId, e.nativeEvent);
+  };
+  
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+  
+    pointers.current.set(e.pointerId, e.nativeEvent);
+    if (pointers.current.size !== 2) return;
+  
+    const [a, b] = Array.from(pointers.current.values());
+    const dist = distance(a, b);
+  
+    if (lastPinchDistance.current != null) {
+      const delta = dist - lastPinchDistance.current;
+      setScale((s) => clampScale(s + delta * 0.002));
+    }
+  
+    lastPinchDistance.current = dist;
+  };
+  
+  
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) {
+      lastPinchDistance.current = null;
+    }
+  };
+  
+  
+
   const downloadPdf = async () => {
     try {
       const response = await fetch(file);
@@ -87,6 +126,26 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
       console.error("Print failed", err);
     }
   };
+  
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+  
+    const onWheel = (e: WheelEvent) => {
+      // 🔒 ONLY ctrl + wheel should zoom
+      if (!e.ctrlKey) return;
+  
+      e.preventDefault();
+  
+      setScale((s) =>
+        clampScale(s + (e.deltaY < 0 ? 0.1 : -0.1))
+      );
+    };
+  
+    el.addEventListener("wheel", onWheel, { passive: false });
+  
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
   
   
 
@@ -189,7 +248,6 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
   const jumpToPage = (page: number) => {
     if (page < 1 || page > numPages) return;
 
-    setCurrentPage(page);
     setPageInput(String(page));
 
     const el = containerRef.current?.querySelector(
@@ -230,18 +288,17 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
   };
 
   const toggleFullscreen = async () => {
-    const el = containerRef.current;
+    const el = fullscreenRef.current;
     if (!el) return;
-
+  
     if (!document.fullscreenElement) {
       await el.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       await document.exitFullscreen();
-      setIsFullscreen(false);
     }
   };
-
+  
+  
   useEffect(() => {
     const handler = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -255,152 +312,209 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
   /* ---------------- Render ---------------- */
 
   return (
-    <div className="flex flex-col h-full relative gap-3">
-      {/* Top Toolbar */}
-      <div
-        ref={toolbarRef}
-        className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background/80 backdrop-blur px-3 py-2 shadow-sm"
-      >
-        {/* Search */}
-        <div className="relative">
-          <input
-            value={query}
-            onFocus={() => setSearchActive(true)}
-            onBlur={() => setSearchActive(false)}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && matches.length > 0) {
-                setActiveMatch((i) =>
-                  e.shiftKey
-                    ? Math.max(0, i - 1)
-                    : Math.min(matches.length - 1, i + 1)
-                );
-              }
-            }}
-            placeholder="Search in document"
-            className="h-9 w-60 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
+    <div
+      ref={fullscreenRef}
+      className={cn(
+        "flex flex-col h-full relative",
+        isFullscreen && "bg-background"
+      )}
+    >
+      {/* ================= TOOLBAR WRAPPER ================= */}
+      <div className="relative">
+        {/* Collapsible toolbar */}
+        <div
+          ref={toolbarRef}
+          className={cn(
+            "sticky top-0 z-30",
+            "transition-[max-height,opacity] duration-300 ease-in-out",
+            toolbarHidden
+            ? "max-h-0 opacity-0 overflow-hidden"
+            : "max-h-[160px] md:max-h-[72px] opacity-100"
 
-        {/* Zoom group */}
-        <div className="flex items-center rounded-md border border-border overflow-hidden">
-          <button
-            onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
-            className="h-9 px-3 hover:bg-muted"
-          >
-            −
-          </button>
-
-          <input
-            value={zoomInput}
-            onChange={(e) => {
-              if (/^\d*$/.test(e.target.value)) {
-                setZoomInput(e.target.value);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const val = Number(zoomInput);
-                if (val >= 50 && val <= 300) {
-                  setScale(val / 100);
-                }
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
-            onBlur={() => {
-              const val = Number(zoomInput);
-              if (val >= 50 && val <= 300) {
-                setScale(val / 100);
-              } else {
-                setZoomInput(Math.round(scale * 100).toString());
-              }
-            }}
-            className="h-9 w-14 text-center text-sm outline-none"
-          />
-
-          <span className="px-2 text-sm text-muted-foreground">%</span>
-
-          <button
-            onClick={() => setScale((s) => Math.min(3, s + 0.1))}
-            className="h-9 px-3 hover:bg-muted"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Fit controls */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={fitToWidth}
-            className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted transition"
-          >
-            Fit Width
-          </button>
-          <button
-            onClick={fitToPage}
-            className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted transition"
-          >
-            Fit Page
-          </button>
-          <button
-            onClick={toggleFullscreen}
-            className="h-9 px-3 rounded-md border border-border hover:bg-muted"
-          >
-            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-          </button>
-          <button
-            onClick={() => {
-              setScale(1.2);
-              setZoomInput("120");
-            }}
-            className="h-9 px-3 rounded-md border border-border hover:bg-muted"
-          >
-            Reset
-          </button>
-        </div>
-
-        {/* Page nav */}
-        <div className="ml-auto flex items-center gap-2 text-sm">
-        <button
-        onClick={downloadPdf}
-        className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted transition"
+          )}
         >
-        <Download className="w-5 h-5"/>
-        </button>
-        <button
-        onClick={printPdf}
-        className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted transition"
-        >
-        <Printer className="w-5 h-5"/>
-        </button>
+          <div
+            className={cn(
+              "mx-auto w-full",
+              "flex items-center gap-2",
+              "flex-wrap md:flex-nowrap",
+              "rounded-lg border border-border",
+              "bg-background/90 backdrop-blur",
+              "px-3 py-2 shadow-sm"
+            )}
+          >
 
-
-          <span className="text-muted-foreground">Page</span>
-          <input
-            type="text"
-            value={pageInput}
-            onChange={(e) => {
-              if (/^\d*$/.test(e.target.value)) {
-                setPageInput(e.target.value);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                jumpToPage(Number(pageInput));
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
-            onBlur={() => jumpToPage(Number(pageInput))}
-            className="h-9 w-14 rounded-md border border-border bg-background text-center outline-none focus:ring-2 focus:ring-primary/40"
-          />
-          <span className="text-muted-foreground">/ {numPages}</span>
+            {/* Search */}
+            <div className="flex items-center shrink-0">
+              <input
+                value={query}
+                onFocus={() => setSearchActive(true)}
+                onBlur={() => setSearchActive(false)}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && matches.length > 0) {
+                    setActiveMatch((i) =>
+                      e.shiftKey
+                        ? Math.max(0, i - 1)
+                        : Math.min(matches.length - 1, i + 1)
+                    );
+                  }
+                }}
+                placeholder="Search in document"
+                className="h-9 w-60 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+  
+            {/* Zoom group */}
+            <div className="flex items-center shrink-0 rounded-md border border-border overflow-hidden">
+              <button
+                onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
+                className="h-9 px-3 hover:bg-muted"
+              >
+                −
+              </button>
+  
+              <input
+                value={zoomInput}
+                onChange={(e) => {
+                  if (/^\d*$/.test(e.target.value)) {
+                    setZoomInput(e.target.value);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = Number(zoomInput);
+                    if (val >= 50 && val <= 300) {
+                      setScale(val / 100);
+                    }
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                onBlur={() => {
+                  const val = Number(zoomInput);
+                  if (val >= 50 && val <= 300) {
+                    setScale(val / 100);
+                  } else {
+                    setZoomInput(Math.round(scale * 100).toString());
+                  }
+                }}
+                className="h-9 w-14 text-center text-sm outline-none"
+              />
+  
+              <span className="px-2 text-sm text-muted-foreground">%</span>
+  
+              <button
+                onClick={() => setScale((s) => Math.min(3, s + 0.1))}
+                className="h-9 px-3 hover:bg-muted"
+              >
+                +
+              </button>
+            </div>
+  
+            {/* Fit controls */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={fitToWidth}
+                className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted transition"
+              >
+                Fit Width
+              </button>
+              <button
+                onClick={fitToPage}
+                className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted transition"
+              >
+                Fit Page
+              </button>
+              <button
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                className="h-9 px-3 rounded-md border border-border hover:bg-muted"
+              >
+                {isFullscreen ? (
+                  <Minimize className="w-5 h-5" />
+                ) : (
+                  <Expand className="w-5 h-5" />
+                )}
+              </button>
+              <button
+                title="Reset zoom"
+                onClick={() => {
+                  setScale(1.2);
+                  setZoomInput("120");
+                }}
+                className="h-9 px-3 rounded-md border border-border hover:bg-muted"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+            </div>
+  
+            {/* Page nav */}
+            <div className="ml-auto flex items-center gap-2 text-sm shrink-0">
+              <button
+                onClick={downloadPdf}
+                className="h-9 px-3 rounded-md border border-border hover:bg-muted transition"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+  
+              <button
+                onClick={printPdf}
+                className="h-9 px-3 rounded-md border border-border hover:bg-muted transition"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+  
+              <span className="text-muted-foreground">Page</span>
+              <input
+                type="text"
+                value={pageInput}
+                onChange={(e) => {
+                  if (/^\d*$/.test(e.target.value)) {
+                    setPageInput(e.target.value);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    jumpToPage(Number(pageInput));
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                onBlur={() => jumpToPage(Number(pageInput))}
+                className="h-9 w-14 rounded-md border border-border bg-background text-center outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <span className="text-muted-foreground">/ {numPages}</span>
+            </div>
+          </div>
         </div>
+  
+        {/* Toolbar toggle handle */}
+        <button
+          onClick={() => setToolbarHidden((v) => !v)}
+          title={toolbarHidden ? "Show toolbar" : "Hide toolbar"}
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 z-40",
+            "top-full mt-5 md:-mt-2",
+            "h-6 w-6 flex items-center justify-center",
+            "rounded-full border border-border",
+            "bg-background shadow hover:bg-muted transition"
+          )}
+        >
+          {toolbarHidden ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronUp className="h-4 w-4" />
+          )}
+        </button>
       </div>
-
-      {/* PDF Container */}
+  
+      {/* ================= PDF CONTAINER ================= */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto border rounded p-4"
+        className="flex-1 overflow-auto border rounded p-4 mt-5 touch-pan-y"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
       >
         <Document
           file={file}
@@ -426,8 +540,11 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
                       width: viewport.width,
                       height: viewport.height,
                     };
-                    setPageWidth(viewport.width);
-                    setPageHeight(viewport.height);
+                  }
+  
+                  if (!didAutoFitRef.current) {
+                    didAutoFitRef.current = true;
+                    requestAnimationFrame(fitToPage);
                   }
                 }}
                 customTextRenderer={textRenderer}
@@ -438,8 +555,8 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
           ))}
         </Document>
       </div>
-
-      {/* Sticky Search Navigator */}
+  
+      {/* ================= SEARCH NAVIGATOR ================= */}
       {(searchActive || matches.length > 0) && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white border shadow rounded px-3 py-2 flex gap-2 items-center z-50 text-black">
           <input
@@ -448,13 +565,13 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
             placeholder="Search keyword"
             className="h-8 w-40 rounded-md border border-border bg-white text-black px-2 text-sm"
           />
-
-          <span className="text-sm text-black">
+  
+          <span className="text-sm">
             {matches.length
               ? `${activeMatch + 1} / ${matches.length}`
               : "0 results"}
           </span>
-
+  
           <button
             onClick={() => setActiveMatch((i) => Math.max(0, i - 1))}
             disabled={!matches.length}
@@ -475,4 +592,5 @@ export default function PDFViewer({ file,name }: { file: string,name:string }) {
       )}
     </div>
   );
+  
 }

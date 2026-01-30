@@ -202,31 +202,6 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: AppSidebarProps
         <NavMain items={navMain} activeTab={activeTab} onTabClick={handleTabClick} />
       </SidebarContent>
       <SidebarFooter>
-        {!isMobile && (
-          <div className="flex flex-row justify-center items-center gap-2">
-            <span className={cn(
-              "text-md font-bold truncate transition-opacity duration-200",
-              isExpanded ? "opacity-100 px-2" : "opacity-0 group-data-[collapsible=icon]:group-hover:opacity-100"
-            )}>Sidebar - {isExpanded ? "Expanded" : "Hover"}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-7 w-7 shrink-0",
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                "transition-all duration-200"
-              )}
-              onClick={() => setOpen(!open)}
-            >
-              {isExpanded ? (
-                <PanelRightOpen className="h-4 w-4" />
-              ) : (
-                <PanelRightClose className="h-4 w-4" />
-              )}
-              <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-          </div>
-        )}
         <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
