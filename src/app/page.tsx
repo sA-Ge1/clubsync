@@ -66,25 +66,27 @@ export default function Home() {
               club operations—efficiently and effortlessly.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               {!loading && user ? (
-                <>
-                  <Button size="lg" className="text-base px-8" onClick={() => router.push("/inventory")}>
-                    Browse Inventory
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Button
+                  className="text-base px-8 w-fit self-start"
+                  onClick={() => router.push("/inventory")}
+                >
+                  Browse Inventory
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+            
+                {roleBtn && (
+                  <Button
+                    variant="outline"
+                    className="text-base px-8 w-fit self-start"
+                    onClick={() => router.push(roleBtn.href)}
+                  >
+                    {roleBtn.label}
                   </Button>
-
-                  {roleBtn && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="text-base px-8"
-                      onClick={() => router.push(roleBtn.href)}
-                    >
-                      {roleBtn.label}
-                    </Button>
-                  )}
-                </>
+                )}
+              </div>
               ) : (
                 <>
                   <Button size="lg" className="text-base px-8" onClick={() => router.push("/signup")}>

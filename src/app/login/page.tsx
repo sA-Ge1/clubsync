@@ -246,7 +246,7 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen w-full">
     <motion.div 
-      className="flex mt-15 w-full items-center justify-center p-6 md:p-10"
+      className="flex w-full items-center justify-center p-6 md:p-10"
       initial="hidden"
       animate="visible"
       variants={containerVariants}

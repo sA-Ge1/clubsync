@@ -601,7 +601,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap bg-muted-background">
           <TabsTrigger value="users">
             <Users className="mr-2 h-4 w-4" />
             User Management
@@ -676,27 +676,42 @@ export default function Settings() {
                           </TableCell>
                           <TableCell>
                             <div className="space-y-2">
-                            <div className="grid grid-cols-3 gap-2">
+                              {/* ACTIONS */}
+                              <div
+                                className="
+                                  grid grid-cols-2 gap-2
+                                  sm:grid-cols-3
+                                  lg:flex lg:flex-wrap lg:gap-2
+                                "
+                              >
+                                {/* View */}
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="w-full sm:w-auto justify-center"
                                   onClick={() => handleViewDetails(user.id)}
                                 >
-                                  <Eye className="mr-1 h-3 w-3" />
-                                  View
+                                  <Eye className="h-4 w-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">View</span>
                                 </Button>
+
+                                {/* Edit */}
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="w-full sm:w-auto justify-center"
                                   onClick={() => handleEditUser(user)}
                                 >
-                                  <Edit className="mr-1 h-3 w-3" />
-                                  Edit
+                                  <Edit className="h-4 w-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">Edit</span>
                                 </Button>
+
+                                {/* Block / Unblock */}
                                 {user.blocked ? (
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    className="w-full sm:w-auto justify-center"
                                     onClick={() => {
                                       setUserToBlock(user);
                                       handleBlockUser(false);
@@ -704,51 +719,60 @@ export default function Settings() {
                                     disabled={blockingUser === user.id}
                                   >
                                     {blockingUser === user.id ? (
-                                      <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                                      <RefreshCw className="h-4 w-4 animate-spin sm:mr-1" />
                                     ) : (
-                                      <UserCheck className="mr-1 h-3 w-3" />
+                                      <UserCheck className="h-4 w-4 sm:mr-1" />
                                     )}
-                                    Unblock
+                                    <span className="hidden sm:inline">Unblock</span>
                                   </Button>
                                 ) : (
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    className="w-full sm:w-auto justify-center"
                                     onClick={() => handleOpenBlockDialog(user)}
                                     disabled={blockingUser === user.id}
                                   >
-                                    <Ban className="mr-1 h-3 w-3" />
-                                    Block
+                                    <Ban className="h-4 w-4 sm:mr-1" />
+                                    <span className="hidden sm:inline">Block</span>
                                   </Button>
                                 )}
+
+                                {/* Reset */}
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="w-full sm:w-auto justify-center"
                                   onClick={() => handleSendResetEmail(user.email)}
                                   disabled={sendingReset === user.email}
                                 >
                                   {sendingReset === user.email ? (
-                                    <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                                    <RefreshCw className="h-4 w-4 animate-spin sm:mr-1" />
                                   ) : (
-                                    <Mail className="mr-1 h-3 w-3" />
+                                    <Mail className="h-4 w-4 sm:mr-1" />
                                   )}
-                                  Reset
+                                  <span className="hidden sm:inline">Reset</span>
                                 </Button>
+
+                                {/* Delete */}
                                 <Button
                                   size="sm"
                                   variant="destructive"
+                                  className="w-full sm:w-auto justify-center"
                                   onClick={() => {
                                     setUserToDelete(user);
                                     setDeleteConfirmOpen(true);
                                   }}
                                   disabled={deletingUser === user.id}
                                 >
-                                  <Trash2 className="mr-1 h-3 w-3" />
-                                  Delete
+                                  <Trash2 className="h-4 w-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">Delete</span>
                                 </Button>
                               </div>
+
+                              {/* BLOCK INFO */}
                               {user.blocked && (
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground leading-tight">
                                   {user.blocked_until ? (
                                     <>Blocked until: {new Date(user.blocked_until).toLocaleString()}</>
                                   ) : (
@@ -758,6 +782,7 @@ export default function Settings() {
                               )}
                             </div>
                           </TableCell>
+
                         </TableRow>
                       ))
                     )}

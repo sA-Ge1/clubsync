@@ -312,7 +312,7 @@ function DashboardContent() {
     />
   );
 
-  if (loading || loadingData) {
+  if (loading || loadingData||!user) {
     return (
       <SidebarProvider>
         <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />

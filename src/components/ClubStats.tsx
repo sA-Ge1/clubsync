@@ -270,6 +270,13 @@ export default function ClubStats() {
 
   return (
     <div className="space-y-6">
+      <div className="mb-4 mt-5 ml-5">
+        <h1 className="text-3xl font-bold">Inter-Club Statistics</h1>
+        <p className="text-muted-foreground">
+          Comparative insights and metrics across all clubs.
+        </p>
+      </div>
+
       {/* Time Period Selector */}
       <div className="flex items-center justify-end gap-2">
         <div className="flex items-center gap-2">
@@ -277,7 +284,7 @@ export default function ClubStats() {
           <span className="text-sm font-medium">Time Period:</span>
         </div>
         <Select value={timePeriod} onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -296,7 +303,7 @@ export default function ClubStats() {
           <CardHeader className="pb-2">
             <CardDescription>Total Clubs</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex items-center justify-center flex-col">
             <div className="text-2xl font-bold flex items-center gap-2">
               <Users className="h-5 w-5" />
               {clubs.length}
@@ -310,7 +317,7 @@ export default function ClubStats() {
           <CardHeader className="pb-2">
             <CardDescription>Total Members</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex items-center justify-center flex-col">
             <div className="text-2xl font-bold flex items-center gap-2">
               <Users className="h-5 w-5" />
               {totalMembers}
@@ -321,7 +328,7 @@ export default function ClubStats() {
           <CardHeader className="pb-2">
             <CardDescription>Total Income</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex items-center justify-center flex-col">
             <div className="text-2xl font-bold text-green-600 flex items-center gap-2">
               <ArrowUpCircle className="h-5 w-5" />
               {formatCurrency(totalIncome)}

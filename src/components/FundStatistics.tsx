@@ -27,7 +27,6 @@ import {
 import { getFundTypeLabel, isIncome, isExpenditure } from "@/lib/fundTypeStatus";
 import { formatCurrency, formatCurrencyAxis } from "@/lib/utils";
 import { ArrowUpCircle, ArrowDownCircle, TrendingUp, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Fund {
@@ -589,15 +588,15 @@ export default function FundStatistics({ funds }: FundStatisticsProps) {
                   className="mx-auto aspect-square max-h-[250px]"
                 >
                   <PieChart>
-                  <ChartTooltip
+                  <ChartTooltip 
                     cursor={false}
-                    content={
-                      <ChartTooltipContent
-  formatter={(value) => formatCurrency(Number(value))}
-/>
-
-                    
-                    }
+                    content={<ChartTooltipContent hideLabel className="
+                      space-y-1
+                      leading-snug
+                      max-w-[220px]
+                      break-words
+                      whitespace-normal
+                    " />}
                   />
 
                     <Pie
@@ -712,15 +711,11 @@ export default function FundStatistics({ funds }: FundStatisticsProps) {
                   config={DETAILED_CHART_CONFIG}
                   className="mx-auto aspect-square max-h-[250px]"
                 >
-                  <PieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value) => [formatCurrency(Number(value)), ""]}
-                        />
-                      }
-                    />
+                  <PieChart className="bg-background text-foreground">
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent hideLabel />}
+                  />
                     <Pie
                       data={incomeTypesData}
                       dataKey="value"
@@ -776,14 +771,10 @@ export default function FundStatistics({ funds }: FundStatisticsProps) {
                   className="mx-auto aspect-square max-h-[250px]"
                 >
                   <PieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value) => [formatCurrency(Number(value)), ""]}
-                        />
-                      }
-                    />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent hideLabel />}
+                  />
                     <Pie
                       data={expenditureTypesData}
                       dataKey="value"
