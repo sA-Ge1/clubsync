@@ -131,6 +131,20 @@ CREATE TABLE public.faculty (
   CONSTRAINT faculty_pkey PRIMARY KEY (faculty_id),
   CONSTRAINT faculty_dept_id_fkey FOREIGN KEY (dept_id) REFERENCES public.departments(dept_id)
 );
+CREATE TABLE public.fund_documents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fund_id uuid NOT NULL,
+  file_name text NOT NULL,
+  file_path text NOT NULL UNIQUE,
+  mime_type text NOT NULL DEFAULT 'application/pdf'::text,
+  file_size bigint NOT NULL,
+  uploaded_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  is_deleted boolean NOT NULL DEFAULT false,
+  CONSTRAINT fund_documents_pkey PRIMARY KEY (id),
+  CONSTRAINT fund_documents_fund_id_fkey FOREIGN KEY (fund_id) REFERENCES public.funds(fund_id),
+  CONSTRAINT fund_documents_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES auth.users(id)
+);
 CREATE TABLE public.funds (
   fund_id uuid NOT NULL DEFAULT gen_random_uuid(),
   amount numeric,
@@ -157,13 +171,6 @@ CREATE TABLE public.inventory (
   is_public boolean NOT NULL DEFAULT true,
   CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id),
   CONSTRAINT inventory_club_id_fkey FOREIGN KEY (club_id) REFERENCES public.clubs(club_id)
-);
-CREATE TABLE public.knowledge_chunks (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  content text NOT NULL,
-  embedding USER-DEFINED,
-  metadata jsonb,
-  CONSTRAINT knowledge_chunks_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.memberships (
   member_id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -199,20 +206,5 @@ CREATE TABLE public.transactions (
   CONSTRAINT transactions_inventory_id_fkey FOREIGN KEY (inventory_id) REFERENCES public.inventory(inventory_id),
   CONSTRAINT transactions_borrower_club_id_fkey FOREIGN KEY (borrower_club_id) REFERENCES public.clubs(club_id)
 );
-
-create table public.fund_documents (
-  id uuid not null default gen_random_uuid (),
-  fund_id uuid not null,
-  file_name text not null,
-  file_path text not null,
-  mime_type text not null default 'application/pdf'::text,
-  file_size bigint not null,
-  uploaded_by uuid null,
-  created_at timestamp with time zone not null default now(),
-  constraint fund_documents_pkey primary key (id),
-  constraint fund_documents_unique_path unique (file_path),
-  constraint fund_documents_fund_id_fkey foreign KEY (fund_id) references funds (fund_id) on delete CASCADE,
-  constraint fund_documents_uploaded_by_fkey foreign KEY (uploaded_by) references auth.users (id) on delete set null
-) TABLESPACE pg_default;
 
 documents stored in supabase bucket - fund-documents. Only pdf uploads are allowed max file size 10mb . metadata is stored in funds_documents

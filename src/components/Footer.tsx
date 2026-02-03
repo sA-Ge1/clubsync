@@ -17,7 +17,7 @@ const Footer = () => {
     { name: 'Support', href: '/support' },
   ];
   const pathName=usePathname();
-  if (pathName=="/dashboard"){
+  if (pathName=="/dashboard"||pathName=="/ai-assistant"){
     return null;
   }
   return (

@@ -143,7 +143,7 @@ export default function ClubPublicPage() {
   }, [members, user]);
 
   const isClubEmailEditor =
-    !!club && !!user && user.role === "club" && user.user_id === club.club_id && user.email === club.email;
+    !!club && !!user && user.role === "club"  && user.email === club.email &&user.user_id==club.club_id;
 
   const canViewFunds = isClubEmailEditor || isMemberOfClub || user?.role === "admin";
 
@@ -222,15 +222,15 @@ export default function ClubPublicPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to all clubs
         </Button>
-        {isClubEmailEditor||user?.role === "admin" && (
-                <Button
-                    variant="ghost"
-                    className="mb-2 -ml-2 inline-flex items-center gap-2"
-                    onClick={() => router.push("/club")}
-                    >
-                    Manage Club
-                    <ArrowRight className="h-4 w-4" />
-            </Button>
+        {(isClubEmailEditor||user?.role === "admin") && (
+              <Button
+                  variant="ghost"
+                  className="mb-2 -ml-2 inline-flex items-center gap-2"
+                  onClick={() => router.push("/club")}
+                  >
+                  Manage Club
+                  <ArrowRight className="h-4 w-4" />
+          </Button>
             )}
             </div>
 

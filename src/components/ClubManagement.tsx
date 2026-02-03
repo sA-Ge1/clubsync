@@ -94,6 +94,7 @@ interface Member {
   name: string;
   email: string;
   role: string;
+  department_name?: string;
 }
 
 interface InventoryItem {
@@ -170,7 +171,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
   const [newMemberRole, setNewMemberRole] = useState("new member");
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "role">("name");
+  const [sortBy, setSortBy] = useState<"name" | "role" | "department">("name");
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
 
   // Inventory management states
@@ -364,7 +365,10 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
           role,
           students:usn (
             name,
-            email
+            email,
+            departments:dept_id (
+              name
+            )
           )
         `)
         .eq("club_id", clubId);
@@ -377,6 +381,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
         name: m.students?.name || "Unknown",
         email: m.students?.email || "",
         role: (m.role || "new member"),
+        department_name: m.students?.departments?.name || "Unknown",
       }));
 
       setMembers(formattedMembers);
@@ -604,6 +609,14 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
     })
     .sort((a, b) => {
       if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "department") {
+        const deptA = (a.department_name || "Unknown").toLowerCase();
+        const deptB = (b.department_name || "Unknown").toLowerCase();
+        if (deptA !== deptB) {
+          return deptA.localeCompare(deptB);
+        }
+        // If same department, sort by name
         return a.name.localeCompare(b.name);
       } else {
         // Sort by role hierarchy
@@ -1404,7 +1417,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                     className="pl-10"
                   />
                 </div>
-                <Select value={sortBy} onValueChange={(value: "name" | "role") => setSortBy(value)}>
+                <Select value={sortBy} onValueChange={(value: "name" | "role" | "department") => setSortBy(value)}>
                   <SelectTrigger className="w-[180px]">
                     <ArrowUpDown className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Sort by" />
@@ -1412,6 +1425,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                   <SelectContent>
                     <SelectItem value="name">Sort by Name</SelectItem>
                     <SelectItem value="role">Sort by Role</SelectItem>
+                    <SelectItem value="department">Sort by Department</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1441,13 +1455,14 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                     <TableHead>USN</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Department</TableHead>
                     <TableHead>Role</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAndSortedMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
                         {searchQuery.trim() ? "No members found" : "No members yet"}
                       </TableCell>
                     </TableRow>
@@ -1474,6 +1489,7 @@ export function ClubManagement({ clubId, showClubSelector = false }: ClubManagem
                         <TableCell>{member.usn}</TableCell>
                         <TableCell>{member.name}</TableCell>
                         <TableCell>{member.email}</TableCell>
+                        <TableCell>{member.department_name || "Unknown"}</TableCell>
                         <TableCell>
                           {updatingRole === member.member_id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

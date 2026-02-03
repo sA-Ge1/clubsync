@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { ReactNode } from "react";
 import { toast } from "sonner";
-import { FloatingNav } from "./ui/floating-navbar";
 import { AnimatedThemeToggler } from "./ui/animated-theme-toggler";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import { supabase } from "@/lib/supabaseClient";
@@ -30,7 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@radix-ui/react-dropdown-menu";
 import { StaticNav } from "./ui/StaticNave";
 
 /* ---------------------------------------------
@@ -72,7 +70,7 @@ export default function Header() {
 
     { name: "Departments", link: "/departments", icon: <Building2 size={20} className="text-indigo-400" /> },
 
-    { name: "AI Chat", link: "/chat", icon: <Bot size={20} className="text-orange-400" /> },
+    { name: "AI Chat", link: "/ai-assistant", icon: <Bot size={20} className="text-orange-400" /> },
 
     { name: "Admin", link: "/dashboard", icon: <Shield size={20} className="text-foreground" /> },
 
