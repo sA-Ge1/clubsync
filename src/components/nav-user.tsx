@@ -154,7 +154,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/chat")}>
+              <DropdownMenuItem onClick={() => router.push("/ai-assistant")}>
                 <Sparkles />
                 AI chat
               </DropdownMenuItem>

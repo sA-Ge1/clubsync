@@ -1,8 +1,9 @@
+import React, { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 
-export function Markdown({ content }: { content: string }) {
+function MarkdownComponent({ content }: { content: string }) {
   return (
     <div className="prose prose-neutral max-w-none break-words">
       <ReactMarkdown
@@ -47,8 +48,8 @@ export function Markdown({ content }: { content: string }) {
             </td>
           ),
           code({ className, children }) {
-            const isBlock = !!className; // ```lang gives className like "language-sql"
-          
+            const isBlock = !!className;
+
             if (!isBlock) {
               return (
                 <code className="px-1.5 py-0.5 rounded bg-muted text-sm">
@@ -56,14 +57,13 @@ export function Markdown({ content }: { content: string }) {
                 </code>
               );
             }
-          
+
             return (
               <pre className="bg-black text-white p-4 rounded-lg overflow-x-auto text-sm">
                 <code className={className}>{children}</code>
               </pre>
             );
           },
-          
         }}
       >
         {content}
@@ -71,3 +71,6 @@ export function Markdown({ content }: { content: string }) {
     </div>
   );
 }
+
+// 🔥 CRITICAL LINE — this fixes streaming lag
+export const Markdown = memo(MarkdownComponent);

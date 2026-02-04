@@ -54,7 +54,6 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const navItems: {
     name: string;
     link: string;
@@ -88,6 +87,12 @@ export default function Header() {
     router.push(link);
     setMobileOpen(false);
   };
+  if (
+    pathname.startsWith("/ai-assistant")
+  ) {
+    return null;
+  }
+  
 
   return (
     <>

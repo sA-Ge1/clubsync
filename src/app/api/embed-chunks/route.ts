@@ -10,6 +10,14 @@ const supabase = createClient(
 const hf = new InferenceClient(process.env.HF_TOKEN);
 
 export async function POST() {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
   // 1. Fetch chunks that don't have embeddings
   const { data: chunks, error } = await supabase
     .from("knowledge_chunks")

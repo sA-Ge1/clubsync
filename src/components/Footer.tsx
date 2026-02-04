@@ -17,9 +17,13 @@ const Footer = () => {
     { name: 'Support', href: '/support' },
   ];
   const pathName=usePathname();
-  if (pathName=="/dashboard"||pathName=="/ai-assistant"){
+  if (
+    pathName.startsWith("/dashboard") ||
+    pathName.startsWith("/ai-assistant")
+  ) {
     return null;
   }
+  
   return (
     <footer className="relative border-t w-full border-border bg-background text-foreground">
       <div className="max-w-7xl mx-auto px-6 py-10">

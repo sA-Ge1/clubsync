@@ -5,9 +5,24 @@ import {
 import { resolveModel } from "@/lib/ai/model-resolver";
 import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
 import { sqlTool } from "@/lib/tools/sqlTool";
+import { createClient } from "@/lib/supabase/server";
+import { decodeAIError } from "@/lib/ai/decodeError";
 
 export async function POST(req: Request) {
   try{
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }), 
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   const { messages, mode, modelId, userApiKey } = await req.json();
 
   const model = resolveModel({ mode, model: modelId, userApiKey });
@@ -34,14 +49,22 @@ export async function POST(req: Request) {
         }
       },
       onError(error) {
-        console.error("LLM ERROR CAUGHT:", error);
+        const decoded = decodeAIError(error);
+        console.log(decoded);
+      },      
+    });
+    return result.toUIMessageStreamResponse({
+      onError(error) {
+        const decoded = decodeAIError(error);
+        return decoded.message;
       },
     });
-    return result.toUIMessageStreamResponse();
+    
   }catch (err: any) {
-    return new Response(err.message, {
-      status: 500,
-      headers: { "Content-Type": "text/plain" },
-    });
+    // ONLY pre-stream errors reach here
+    const decoded = decodeAIError(err);
+
+    return new Response(decoded.message, { status: decoded.status });
+
   }
 }
