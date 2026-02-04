@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils";
 import { useKeyVault } from "@/components/ui/useKeyVault";
 import { KeyManagerDialog } from "@/components/ui/KeyManager";
 import { AIMode, ModeToggle } from "@/components/ui/ModeToggle";
-import { MODEL_GROUPS, parseModelValue } from "@/components/ui/models";
+import { parseModelValue } from "@/components/ui/models";
 import { ModelCombobox } from "@/components/ui/ModelSelect";
 import { PromptSuggestion } from "@/components/ui/prompt-suggestion";
 import { Markdown } from "@/components/Markdown";
@@ -83,12 +83,6 @@ export const ChatMessage = memo(function ChatMessage({
         {message.parts.map((part: any, i: number) => {
           if (part.type === "text") {
             const blocks = blocksByPart[i];
-            const isErrorText = part.text.startsWith("Error")
-            if(isErrorText){
-              return(
-                <div key={i} className="rounded-xl flex items-center gap-2 justify-start max-w-full sm:max-w-[50%]"> <p className="p-3 rounded-xl border text-red-500">{part.text||"An unexpected error occured!"}</p> </div>
-              );
-            }
             return (
               <div key={i} className="space-y-3">
                 {blocks.map((b: any, idx: number) => {
@@ -383,6 +377,7 @@ export default function Page() {
       api: "/api/ai/chat",
     }),
     onFinish: async ({ messages, finishReason }) => {
+      console.log("finishReason")
       if (chatId === "new" || !finishReason) return;
     
       const assistant = messages[messages.length - 1];
@@ -400,6 +395,9 @@ export default function Page() {
         loadChats();
       }
     },
+    onError: async(error)=>{
+      console.log(error)
+    }
   });
 
   useEffect(() => {
@@ -545,7 +543,7 @@ export default function Page() {
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <h1 className="text-sm font-medium tracking-wide text-muted-foreground" onClick={()=>console.log(messages)}>
+            <h1 className="text-sm font-medium tracking-wide text-muted-foreground" onClick={()=>console.log(error)}>
                  ClubSync Assistant
             </h1>
 
@@ -578,17 +576,23 @@ export default function Page() {
 
         <ChatContainerRoot className="relative h-full w-full items-center" key={chatId} >
 
-  <ChatContainerContent className="px-6 py-6 space-y-6">
-    {messages.map((m) => (
-      <ChatMessage
-        key={m.id}
-        message={m}
-        isLast={m.id === messages[messages.length - 1]?.id}
-        status={status}
-        copiedId={copiedId}
-        setCopiedId={setCopiedId}
-      />
-    ))}
+          <ChatContainerContent className="px-6 py-6 space-y-6">
+            {messages.map((m) => (
+              <>
+              <ChatMessage
+                key={m.id}
+                message={m}
+                isLast={m.id === messages[messages.length - 1]?.id}
+                status={status}
+                copiedId={copiedId}
+                setCopiedId={setCopiedId}
+              />
+              </>
+            ))}
+              {error&&(
+                <div className="rounded-xl flex items-center gap-2 justify-start max-w-full sm:max-w-[50%]"> <p className="p-3 rounded-xl border text-red-500">{error.message||"An unexpected error occured!"}</p> </div>
+              )}
+            
 
     {/* 🔥 THIS IS WHAT YOU WERE MISSING */}
     <ChatContainerScrollAnchor />

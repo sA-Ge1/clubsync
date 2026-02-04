@@ -1,76 +1,30 @@
-export function decodeAIError(error: any): {
-    status: number;
-    message: string;
-  } {
-    const raw = String(error?.message || error || "").toLowerCase();
-    if (raw.includes("gatewayauthenticationerror") || raw.includes("ai gateway")) {
-        return {
-          status: 401,
-          message: "AI provider is not configured correctly.",
-        };
-      }      
-    // ---- Auth / API key ----
-    if (raw.includes("api key") || raw.includes("unauthorized")) {
-      return { status: 401, message: "Invalid or missing API key." };
-    }
-  
-    // ---- Rate limits ----
-    if (raw.includes("rate limit") || raw.includes("too many requests")) {
-      return { status: 429, message: "Too many requests. Please wait a moment." };
-    }
-  
-    // ---- Context / token overflow ----
-    if (
-      raw.includes("context length") ||
-      raw.includes("max tokens") ||
-      raw.includes("too long")
-    ) {
-      return {
-        status: 400,
-        message: "Conversation is too long. Please start a new chat.",
-      };
-    }
-  
-    // ---- Model not found / wrong id ----
-    if (raw.includes("model") && raw.includes("not found")) {
-      return {
-        status: 400,
-        message: "Selected model is unavailable.",
-      };
-    }
-  
-    // ---- Tool errors ----
-    if (raw.includes("tool") || raw.includes("sql")) {
-      return {
-        status: 400,
-        message: "Failed while querying the database.",
-      };
-    }
-  
-    // ---- Network / provider outages ----
-    if (
-      raw.includes("fetch failed") ||
-      raw.includes("network") ||
-      raw.includes("timeout")
-    ) {
-      return {
-        status: 503,
-        message: "AI service is temporarily unavailable.",
-      };
-    }
-  
-    // ---- JSON / validation / malformed messages ----
-    if (raw.includes("json") || raw.includes("validation")) {
-      return {
-        status: 400,
-        message: "Invalid message format.",
-      };
-    }
-  
-    // ---- Fallback ----
-    return {
-      status: 500,
-      message: "Something went wrong. Please try again.",
-    };
+export function errorDecoder(raw: unknown): string {
+  if (!raw) return "Unknown error";
+
+  const text =
+    typeof raw === "string"
+      ? raw
+      : raw instanceof Error
+      ? raw.message
+      : JSON.stringify(raw);
+
+  // 1️⃣ If provider returned structured JSON in responseBody, prefer that
+  const responseBodyMatch = text.match(/"message":"([^"]+)"/);
+  if (responseBodyMatch) {
+    return responseBodyMatch[1].trim();
   }
-  
+
+  // 2️⃣ Extract message after `Error [Type]:`
+  const errorHeaderMatch = text.match(/Error\s*\[[^\]]+\]:\s*([\s\S]*?)\n/);
+  if (errorHeaderMatch) {
+    return errorHeaderMatch[1].trim();
+  }
+
+  // 3️⃣ Fallback: first non-empty line
+  const firstLine = text
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l.length > 0);
+
+  return firstLine || "Unknown error";
+}

@@ -6,7 +6,7 @@ import { resolveModel } from "@/lib/ai/model-resolver";
 import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
 import { sqlTool } from "@/lib/tools/sqlTool";
 import { createClient } from "@/lib/supabase/server";
-import { decodeAIError } from "@/lib/ai/decodeError";
+import { errorDecoder } from "@/lib/ai/decodeError";
 
 export async function POST(req: Request) {
   try{
@@ -49,22 +49,36 @@ export async function POST(req: Request) {
         }
       },
       onError(error) {
-        const decoded = decodeAIError(error);
-        console.log(decoded);
+        //console.log(error)
+        const decoded = errorDecoder(error);
+        console.log("This is on stream error ",decoded);
+      
       },      
     });
     return result.toUIMessageStreamResponse({
       onError(error) {
-        const decoded = decodeAIError(error);
-        return decoded.message;
-      },
+        const decoded = errorDecoder(error);
+        return decoded  // ✅ becomes useChat onError
+      } 
     });
     
   }catch (err: any) {
     // ONLY pre-stream errors reach here
-    const decoded = decodeAIError(err);
-
-    return new Response(decoded.message, { status: decoded.status });
-
+    const decoded = errorDecoder(err);
+    console.log("This is catch error ",decoded)
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(decoded);
+          controller.close();
+        },
+      }),
+      {
+        headers: {
+          "Content-Type": "text/event-stream",
+        },
+        status: 500,
+      }
+    );
   }
 }
