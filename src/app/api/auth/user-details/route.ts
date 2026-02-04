@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createClient as supabaseClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/guards/adminGuard";
 // Create admin client for user details
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(req: NextRequest) {
-  const supabase = await supabaseClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireAdmin();
+  if (guard.error) return guard.error;
   try {
     const { userId } = await req.json();
 
