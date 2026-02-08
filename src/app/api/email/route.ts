@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from 'nodemailer'
-import { createClient } from "@/lib/supabase/server";
+import nodemailer from "nodemailer";
 export async function POST(req: NextRequest) {
-    const supabase = await createClient();
-    const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-    
-      if (authError || !user) {
-        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-      }
+        const userId = req.headers.get("x-user-id");
+        if (!userId) {
+                return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
     if (req.method !== "POST") {
         return NextResponse.json(
             { message: "Only POST allowed." },

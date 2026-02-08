@@ -38,7 +38,7 @@ export const sqlTool = tool({
   execute: async ({ query }) => {
     assertReadOnly(query);
     const cleaned = query.replace(/;/g, "");
-    console.log(query);
+    // console.log(query);
     const { data, error } = await supabase.rpc("execute_sql", {
       sql: cleaned,
     });

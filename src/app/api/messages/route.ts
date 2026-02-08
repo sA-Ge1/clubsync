@@ -5,12 +5,8 @@ import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  const userId = req.headers.get("x-user-id");
+  if (!userId) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();

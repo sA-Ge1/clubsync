@@ -71,6 +71,21 @@ export default function LoginPage() {
   const [redirectCountdown, setRedirectCountdown] = useState(0);
   const [showRedirectMessage, setShowRedirectMessage] = useState(false);
 
+  const signOutAndReset = async (message?: string) => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Failed to sign out:", err);
+    }
+    setVerified(false);
+    setStep("email");
+    setOtp("");
+    setCountdown(0);
+    if (message) {
+      setError(message);
+    }
+  };
+
   // Email validation
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -105,7 +120,7 @@ export default function LoginPage() {
     // Handle auth callback error
     if (urlParams.get('error')) {
       const errorMessage = urlParams.get('error');
-      setError(errorMessage || 'Authentication failed');
+      signOutAndReset(errorMessage || 'Authentication failed');
       
       // If the error message indicates account not present, start redirect countdown
       if (errorMessage && errorMessage.includes('Account not present')) {
@@ -202,13 +217,13 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      await signOutAndReset(error.message);
     } else if (data.user) {
       // Double-check that user exists in database before allowing login
       const userExists = await checkUserExists(email);
       
       if (!userExists) {
-        setError("Account not present. Please sign up first.");
+        await signOutAndReset("Account not present. Please sign up first.");
         setShowRedirectMessage(true);
         setRedirectCountdown(8);
         setIsVerifyingOTP(false);

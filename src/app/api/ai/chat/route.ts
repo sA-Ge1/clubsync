@@ -5,16 +5,12 @@ import {
 import { resolveModel } from "@/lib/ai/model-resolver";
 import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
 import { sqlTool } from "@/lib/tools/sqlTool";
-import { createClient } from "@/lib/supabase/server";
 import { errorDecoder } from "@/lib/ai/decodeError";
 
 export async function POST(req: Request) {
   try{
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = req.headers.get("x-user-id");
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }), 
         {

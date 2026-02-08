@@ -197,7 +197,8 @@ export function DepartmentPublic({ deptId }: DepartmentPublicProps) {
                 </div>
 
                 <div className="h-full flex flex-col justify-center items-center gap-2">
-                    {isFaculty &&pathName!="/department"&&pathName!="/dashboard"&& (
+                    {isFaculty &&pathName!="/department"&&pathName!="/dashboard"&&faculty.some(f => f.faculty_id === user.user_id)&&
+ (
                         <Button
                         variant="ghost"
                         className="mb-2 inline-flex items-center gap-2"

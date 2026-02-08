@@ -30,14 +30,34 @@ export function UserProvider({ children }: UserProviderProps) {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const parseJwtPayload = (token: string): Record<string, any> | null => {
+    try {
+      const payloadPart = token.split(".")[1];
+      if (!payloadPart) {
+        return null;
+      }
+      const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+      const decoded = JSON.parse(atob(padded));
+      return decoded ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   const fetchUser = async (): Promise<void> => {
     setLoading(true);
 
     const {
-      data: { user: authUser }
-    } = await supabase.auth.getUser();
-    
-    if (!authUser) {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const accessToken = session?.access_token;
+    const tokenPayload = accessToken ? parseJwtPayload(accessToken) : null;
+
+    const authUserId =
+      typeof tokenPayload?.sub === "string" ? tokenPayload.sub : session?.user?.id;
+    if (!authUserId) {
       setUser(null);
       setLoading(false);
       return;
@@ -49,7 +69,7 @@ export function UserProvider({ children }: UserProviderProps) {
     const { data, error } = await supabase
       .from("auth")
       .select("email, role, club_id,faculty_id,student_id")
-      .eq("id", authUser.id)
+      .eq("id", authUserId)
       .single();
 
     if (error) {
@@ -61,15 +81,19 @@ export function UserProvider({ children }: UserProviderProps) {
       data?.student_id ??
       data?.club_id ??
       data?.faculty_id ??
-      (role === "admin" ? authUser.id : "notset");
+      (role === "admin" ? authUserId : "notset");
 
     setUser({
-      auth_id: authUser.id,
-      email: authUser.email!??data?.email??"",
-      name:authUser.user_metadata.name??"",
+      auth_id: authUserId,
+      email:
+        (typeof tokenPayload?.email === "string" ? tokenPayload.email : undefined) ??
+        session?.user?.email ??
+        data?.email ??
+        "",
+      name: session?.user?.user_metadata?.name ?? "",
       role,
       user_id: derivedId,
-      avatar: authUser.user_metadata.avatar || ""
+      avatar: session?.user?.user_metadata?.avatar || ""
     });
 
     setLoading(false);

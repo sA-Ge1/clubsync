@@ -171,6 +171,22 @@ export default function SignUpPage() {
     setCountdown(0);
   };
 
+  const signOutAndReset = async (message?: string) => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Failed to sign out:", err);
+    }
+    setVerified(false);
+    setAuthMethod("email");
+    setStep("email");
+    setOtp("");
+    setCountdown(0);
+    if (message) {
+      setError(message);
+    }
+  };
+
   // Check if user exists in database
   const checkUserExists = async (email: string) => {
     try {
@@ -255,7 +271,7 @@ export default function SignUpPage() {
       });
 
       if (error) {
-        setError(`OTP verification failed: ${error.message}`);
+        await signOutAndReset(`OTP verification failed: ${error.message}`);
         setIsVerifyingOTP(false);
         return;
       } 
@@ -270,10 +286,10 @@ export default function SignUpPage() {
         
         return; // Exit early to avoid setting isVerifyingOTP to false again
       } else {
-        setError("OTP verification failed: No user data received");
+        await signOutAndReset("OTP verification failed: No user data received");
       }
     } catch (err: any) {
-      setError(`Unexpected error: ${err.message || 'OTP verification failed'}`);
+      await signOutAndReset(`Unexpected error: ${err.message || 'OTP verification failed'}`);
     } finally {
       setIsVerifyingOTP(false);
     }
@@ -329,27 +345,27 @@ export default function SignUpPage() {
     setError("")
     setIsSigningUp(true)
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-      if (userError) {
-        setError(`Authentication error: ${userError.message}`);
-        setIsSigningUp(false);
-        setStep("email")
-        return;
-      }
+    if (sessionError) {
+      await signOutAndReset(`Authentication error: ${sessionError.message}`);
+      setIsSigningUp(false);
+      return;
+    }
 
-      if (!user) {
-        setError("User not found. Please authenticate again.");
-        setIsSigningUp(false);
-        setStep("email");
-        setVerified(false);
-        setAuthMethod("email");
-        return;
-      }
+    const user = session?.user;
+    if (!user) {
+      await signOutAndReset("User not found. Please authenticate again.");
+      setIsSigningUp(false);
+      return;
+    }
   
     if (!userType || !usn) {
-      setError("Select ID type and enter valid ID");
-      setIsSigningUp(false)
+      await signOutAndReset("Select ID type and enter valid ID");
+      setIsSigningUp(false);
       return;
     }
   
@@ -378,7 +394,7 @@ export default function SignUpPage() {
       role = "admin";
       const code = process.env.NEXT_PUBLIC_ADMIN_CODE;
       if (!code || usn !== code) {
-        setError("Invalid admin code");
+        await signOutAndReset("Invalid admin code");
         setIsSigningUp(false);
         return;
       }
@@ -398,7 +414,7 @@ export default function SignUpPage() {
         .maybeSingle();
 
       if (error || !data) {
-        setError("No matching record found for email + ID.");
+        await signOutAndReset("No matching record found for email + ID.");
         setIsSigningUp(false);
         return;
       }
@@ -422,7 +438,7 @@ export default function SignUpPage() {
   
     if (updateError) {
       console.log(updateError);
-      setError("Failed to update user profile.");
+      await signOutAndReset("Failed to update user profile.");
       return;
     }
   
@@ -576,7 +592,7 @@ export default function SignUpPage() {
                             animate="visible"
                           >
                             
-                            <Select onValueChange={(value)=>{setUserType(value); console.log(value)}} required>
+                            <Select onValueChange={(value)=>{setUserType(value)}} required>
                               Link
                               <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Select User Type" />
@@ -614,7 +630,6 @@ export default function SignUpPage() {
                             variants={itemVariants}
                           >
                             <Button 
-                              disabled={isSigningUp}  
                               onClick={completeGoogleSignup}
                               className="w-full border-2 bg-primary hover:bg-primary/90 border-primary text-primary-foreground rounded-md transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
                             >

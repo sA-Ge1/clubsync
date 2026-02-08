@@ -6,13 +6,8 @@ import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  const userId = req.headers.get("x-user-id");
+  if (!userId) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -22,7 +17,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabase.from("chats").insert({
     id: chatId,
-    user_id: user.id,
+    user_id: userId,
     model_id: modelId,
     mode,
   });

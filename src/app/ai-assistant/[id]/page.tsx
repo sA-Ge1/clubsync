@@ -571,14 +571,11 @@ export default function Page() {
   
         {/* MESSAGES — ONLY SCROLL AREA */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-
-
-
         <ChatContainerRoot className="relative h-full w-full items-center" key={chatId} >
 
           <ChatContainerContent className="px-6 py-6 space-y-6">
             {messages.map((m) => (
-              <>
+
               <ChatMessage
                 key={m.id}
                 message={m}
@@ -587,14 +584,10 @@ export default function Page() {
                 copiedId={copiedId}
                 setCopiedId={setCopiedId}
               />
-              </>
             ))}
               {error&&(
                 <div className="rounded-xl flex items-center gap-2 justify-start max-w-full sm:max-w-[50%]"> <p className="p-3 rounded-xl border text-red-500">{error.message||"An unexpected error occured!"}</p> </div>
               )}
-            
-
-    {/* 🔥 THIS IS WHAT YOU WERE MISSING */}
     <ChatContainerScrollAnchor />
 
   </ChatContainerContent>

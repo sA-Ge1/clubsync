@@ -18,6 +18,11 @@ export default function AuthCallback() {
         const source = urlParams.get('source') || 'login'; // Default to login if no source specified
         
         if (error) {
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error("Failed to sign out:", signOutError);
+          }
           setStatus('error');
           setErrorMessage(error.message);
           
@@ -58,6 +63,11 @@ export default function AuthCallback() {
                   .single();
                 
                 if (profileError || !profileData) {
+                  try {
+                    await supabase.auth.signOut();
+                  } catch (signOutError) {
+                    console.error("Failed to sign out:", signOutError);
+                  }
                   // User doesn't exist in database, redirect to signup
                   router.push('/login?error=' + encodeURIComponent('Account not present. Please sign up first.'));
                 } else {
@@ -70,6 +80,11 @@ export default function AuthCallback() {
             }
           }, 2000);
         } else {
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error("Failed to sign out:", signOutError);
+          }
           setStatus('error');
           setErrorMessage('No session found');
           setTimeout(() => {
@@ -81,6 +96,11 @@ export default function AuthCallback() {
           }, 2000);
         }
       } catch (err) {
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error("Failed to sign out:", signOutError);
+        }
         setStatus('error');
         setErrorMessage('Unexpected error occurred');
         setTimeout(() => {

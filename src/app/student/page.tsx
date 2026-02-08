@@ -318,7 +318,7 @@ export default function StudentDashboardPage() {
         <p className="text-muted-foreground">
           Unable to load your dashboard. Please try again later.
         </p>
-        {(user?.role=="admin")&&(
+        {(user?.role==="admin")&&(
             <Button variant="outline" onClick={()=>{
               setAdminUsn("");
               setProfile(null);
@@ -345,11 +345,6 @@ export default function StudentDashboardPage() {
               </p>
             </div>
             <div>
-              <Button variant="outline" onClick={()=>{
-                setAdminUsn("");
-                setProfile(null);
-                setStudentSet(false);
-              }}>Clear</Button>
             </div>
           </div>
           

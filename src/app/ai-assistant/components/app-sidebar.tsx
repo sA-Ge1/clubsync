@@ -30,7 +30,7 @@ type Chat = {
 }
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
-  chats: Chat[]
+  chats?: Chat[]
   activeChatId: string | null
   onOpenChat: (id: string) => void
   refreshChats: () => void
@@ -71,7 +71,8 @@ export function AppSidebar({
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [title, setTitle] = React.useState("")
   const { user } = useUserInfo();
-  const grouped = React.useMemo(() => groupChatsByDate(chats), [chats])
+  const safeChats = Array.isArray(chats) ? chats : []
+  const grouped = React.useMemo(() => groupChatsByDate(safeChats), [safeChats])
   const router = useRouter();
   async function deleteChat(id: string) {
     await fetch(`/api/chats/${id}`, {
