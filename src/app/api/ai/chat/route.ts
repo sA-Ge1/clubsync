@@ -49,9 +49,19 @@ export async function POST(req: Request) {
         const decoded = errorDecoder(error);
         console.log("This is on stream error ",decoded);
       
-      },      
+      },   
+      onFinish(data){
+        console.log(data.usage);
+      }   
     });
     return result.toUIMessageStreamResponse({
+      messageMetadata({ part }) {
+    if (part.type === "finish") {
+      return {
+        usage: part.totalUsage
+      };
+    }
+  },
       onError(error) {
         const decoded = errorDecoder(error);
         return decoded  // ✅ becomes useChat onError

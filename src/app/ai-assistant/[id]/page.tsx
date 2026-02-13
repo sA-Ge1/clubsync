@@ -5,6 +5,14 @@ import { AppSidebar } from "../components/app-sidebar"
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
@@ -38,7 +46,7 @@ import { Tool } from "@/components/ui/tool";
 import { SqlCodeBlock } from "@/components/ui/sql-code";
 import { ChatContainerContent,ChatContainerRoot,ChatContainerScrollAnchor } from "@/components/ui/chat-container";
 import { Message,MessageContent,MessageAction,MessageActions } from "@/components/ui/message";
-import { ArrowUp, CheckCheck, Copy, Home, Loader2, RotateCwIcon, Square ,Trash2} from "lucide-react";
+import { ArrowUp, BarChart, ChartLine, ChartNoAxesColumn, CheckCheck, Copy, Home, Loader2, RotateCwIcon, Square ,Trash2} from "lucide-react";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import { cn } from "@/lib/utils";
 import { useKeyVault } from "@/components/ui/useKeyVault";
@@ -60,12 +68,6 @@ export const ChatMessage = memo(function ChatMessage({
 }: any) {
   const isAssistant = message.role === "assistant";
 
-  const blocksByPart = useMemo(() => {
-    return message.parts.map((p: any) =>
-      p.type === "text" ? parseBlocks(p.text) : null
-    );
-  }, [message.parts]);
-
   return (
     <Message
       className={cn(
@@ -82,47 +84,13 @@ export const ChatMessage = memo(function ChatMessage({
       >
         {message.parts.map((part: any, i: number) => {
           if (part.type === "text") {
-            const blocks = blocksByPart[i];
             return (
-              <div key={i} className="space-y-3">
-                {blocks.map((b: any, idx: number) => {
-                  if (b.type === "understanding")
-                    return (
-                      <ReasoningSection
-                        key={idx}
-                        title="Understanding"
-                        text={b.text}
-                        isStreaming={status === "streaming"}
-                      />
-                    );
-
-                  if (b.type === "plan")
-                    return (
-                      <ReasoningSection
-                        key={idx}
-                        title="SQL Plan"
-                        text={b.text}
-                        isStreaming={status === "streaming"}
-                      />
-                    );
-
-                  if (b.type === "sql")
-                    return <SqlCodeBlock key={idx} code={b.text} />;
-
-                  return (
-                    <MessageContent
-                      key={idx}
-                      className={
-                        isAssistant
-                          ? "bg-background prose prose-neutral max-w-none"
-                          : "bg-foreground/70 text-background prose prose-neutral max-w-none"
-                      }
-                    >
-                      <Markdown content={b.text} />
-                    </MessageContent>
-                  );
-                })}
-              </div>
+              <TextPart
+                key={i}
+                text={part.text}
+                isAssistant={isAssistant}
+                isStreaming={status === "streaming"}
+              />
             );
           }
 
@@ -220,6 +188,59 @@ function parseBlocks(text: string): Block[] {
 
   return blocks;
 }
+
+const TextPart = memo(function TextPart({
+  text,
+  isAssistant,
+  isStreaming,
+}: {
+  text: string;
+  isAssistant: boolean;
+  isStreaming: boolean;
+}) {
+  const blocks = useMemo(() => parseBlocks(text), [text]);
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((b: any, idx: number) => {
+        if (b.type === "understanding")
+          return (
+            <ReasoningSection
+              key={idx}
+              title="Understanding"
+              text={b.text}
+              isStreaming={isStreaming}
+            />
+          );
+
+        if (b.type === "plan")
+          return (
+            <ReasoningSection
+              key={idx}
+              title="SQL Plan"
+              text={b.text}
+              isStreaming={isStreaming}
+            />
+          );
+
+        if (b.type === "sql") return <SqlCodeBlock key={idx} code={b.text} />;
+
+        return (
+          <MessageContent
+            key={idx}
+            className={
+              isAssistant
+                ? "bg-background prose prose-neutral max-w-none"
+                : "bg-foreground/70 text-background prose prose-neutral max-w-none"
+            }
+          >
+            <Markdown content={b.text} />
+          </MessageContent>
+        );
+      })}
+    </div>
+  );
+});
 
 
 
@@ -342,6 +363,7 @@ export default function Page() {
   const [chatList, setChatList] = useState<any[]>([]);
   const [input, setInput] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [usageDialogOpen, setUsageDialogOpen] = useState(false);
 
   /* ---------------- AUTH GUARD ---------------- */
 
@@ -411,6 +433,55 @@ export default function Page() {
     // set input so UI shows it
     setInput(first);
   }, [chatId]);
+
+  const usageRecords = useMemo(() => {
+    return messages
+      .map((message: any, index: number) => {
+        const usage = message?.metadata?.usage;
+        if (!usage) return null;
+        return {
+          index: index + 1,
+          id: message.id,
+          role: message.role,
+          usage: {
+            inputTokens:
+              typeof usage.inputTokens === "number" ? usage.inputTokens : 0,
+            outputTokens:
+              typeof usage.outputTokens === "number"
+                ? usage.outputTokens
+                : 0,
+            totalTokens:
+              typeof usage.totalTokens === "number" ? usage.totalTokens : 0,
+          },
+        };
+      })
+      .filter(Boolean) as {
+      index: number;
+      id: string;
+      role: string;
+      usage: {
+        inputTokens?: number;
+        outputTokens?: number;
+        totalTokens?: number;
+      };
+    }[];
+  }, [messages]);
+
+  const usageTotals = useMemo(() => {
+    return usageRecords.reduce(
+      (acc, record) => {
+        acc.inputTokens += record.usage.inputTokens ?? 0;
+        acc.outputTokens += record.usage.outputTokens ?? 0;
+        acc.totalTokens += record.usage.totalTokens ?? 0;
+        return acc;
+      },
+      {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+      }
+    );
+  }, [usageRecords]);
 
   
   
@@ -543,7 +614,7 @@ export default function Page() {
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <h1 className="text-sm font-medium tracking-wide text-muted-foreground" onClick={()=>console.log(error)}>
+            <h1 className="text-sm font-medium tracking-wide text-muted-foreground">
                  ClubSync Assistant
             </h1>
 
@@ -557,6 +628,82 @@ export default function Page() {
             >
               <Home />
             </Button>
+            <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2 rounded-lg text-foreground hover:text-foreground"
+                  aria-label="View chat usage"
+                >
+                  <ChartNoAxesColumn className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Chat Usage</DialogTitle>
+                  <DialogDescription>
+                    Token usage for this conversation is stored temporarily in
+                    memory.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Prompt</p>
+                    <p className="text-lg font-semibold">
+                      {usageTotals.inputTokens}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Reply</p>
+                    <p className="text-lg font-semibold">
+                      {usageTotals.outputTokens}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="text-lg font-semibold">
+                      {usageTotals.totalTokens}
+                    </p>
+                  </div>
+                </div>
+                {usageRecords.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    No usage data yet. Send a message to populate usage stats.
+                  </div>
+                ) : (
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-16">Turn</TableHead>
+                        <TableHead className="w-24">Role</TableHead>
+                        <TableHead className="text-right">Prompt</TableHead>
+                        <TableHead className="text-right">Reply</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {usageRecords.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.index}</TableCell>
+                          <TableCell className="capitalize">
+                            {record.role}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {record.usage.inputTokens ?? 0}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {record.usage.outputTokens ?? 0}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {record.usage.totalTokens ?? 0}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </DialogContent>
+            </Dialog>
             <KeyManagerDialog />
           </div>
           </div>
@@ -570,7 +717,7 @@ export default function Page() {
 
   
         {/* MESSAGES — ONLY SCROLL AREA */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
         <ChatContainerRoot className="relative h-full w-full items-center" key={chatId} >
 
           <ChatContainerContent className="px-6 py-6 space-y-6">
@@ -586,15 +733,19 @@ export default function Page() {
               />
             ))}
               {error&&(
-                <div className="rounded-xl flex items-center gap-2 justify-start max-w-full sm:max-w-[50%]"> <p className="p-3 rounded-xl border text-red-500">{error.message||"An unexpected error occured!"}</p> </div>
+                <div className="rounded-xl flex items-center gap-2 justify-start max-w-full sm:max-w-[50%]"> 
+                  <p className="p-3 rounded-xl border text-red-500">
+                    {error.message||"An unexpected error occured!"}
+                  </p> 
+                </div>
               )}
     <ChatContainerScrollAnchor />
 
-  </ChatContainerContent>
-      {/* 🔥 Scroll button lives inside root, not outside */}
-      <div className="w-screen absolute z-10 right-0 top-1">
-    <ScrollButton />
-  </div>
+    </ChatContainerContent>
+        {/* 🔥 Scroll button lives inside root, not outside */}
+        <div className="absolute bottom-6 right-6 z-10">
+      <ScrollButton />
+    </div>
 
 </ChatContainerRoot>
 
@@ -664,8 +815,6 @@ export default function Page() {
 
                 </div>
 
-
-
               </div>
             </div>
           )}
@@ -717,9 +866,9 @@ export default function Page() {
           </div >
           <div className="flex items-center justify-between gap-2">
             <ModelCombobox
-                value={selectedModel}
-                onChange={setSelectedModel}
-              />
+              value={selectedModel}
+              onChange={setSelectedModel}
+            />
             <ModeToggle value={mode} onChange={setMode} />
             
           </div>

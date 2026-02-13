@@ -16,7 +16,8 @@ export async function GET(
     .from("messages")
     .select("*")
     .eq("chat_id", id)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("role", { ascending: false });
 
   return NextResponse.json(data ?? []);
 }
