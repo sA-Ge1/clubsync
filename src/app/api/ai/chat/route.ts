@@ -5,6 +5,9 @@ import {
 import { resolveModel } from "@/lib/ai/model-resolver";
 import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
 import { sqlTool } from "@/lib/tools/sqlTool";
+import { reportTool } from "@/lib/tools/reportTool";
+import { tavilyTool } from "@/lib/tools/tavilyTool";
+import { schemaInfoTool } from "@/lib/tools/schemaInfoTool";
 import { errorDecoder } from "@/lib/ai/decodeError";
 
 export async function POST(req: Request) {
@@ -28,8 +31,33 @@ export async function POST(req: Request) {
       model,
       system: SYSTEM_PROMPT,
       messages: modelMessages,
-      tools: { sql: sqlTool},
+      tools: { 
+        sql: sqlTool,
+        report: reportTool,
+        tavily: tavilyTool,
+        schema_info: schemaInfoTool,
+      },
       toolChoice: "auto",
+      // Stop after 6 steps OR immediately after successful report generation
+      stopWhen: (context) => {
+        // Stop only if report tool succeeded (pdf_data is too large for model context)
+        // If report failed (e.g., club not found), let the AI continue to respond
+        for (const step of context.steps) {
+          if (step.toolResults) {
+            for (const toolResult of step.toolResults) {
+              // Cast to any to access dynamic properties
+              const tr = toolResult as any;
+              const output = tr.output || tr.result || tr;
+              if (toolResult.toolName === 'report' && output?.success === true) {
+                console.log("🛑 Stopping: successful report generated");
+                return true;
+              }
+            }
+          }
+        }
+        // Also stop after 6 steps max
+        return context.steps.length >= 6;
+      },
       onStepFinish(step) {
         // Step contains what just happened
         if (step.toolCalls?.length) {
@@ -39,20 +67,25 @@ export async function POST(req: Request) {
         }
     
         if (step.toolResults?.length) {
-          for (const result of step.toolResults) {
-            console.log("✅ Tool result from:", result.toolName);
+          for (const res of step.toolResults) {
+            console.log("✅ Tool result from:", res.toolName);
+            // Debug: log structure for report tool
+            if (res.toolName === 'report') {
+              const r = res as any;
+              console.log("📊 Report result structure:", JSON.stringify({
+                hasOutput: !!r.output,
+                outputSuccess: r.output?.success,
+                directSuccess: r.success,
+              }));
+            }
           }
         }
       },
       onError(error) {
-        //console.log(error)
         const decoded = errorDecoder(error);
-        console.log("This is on stream error ",decoded);
+        console.log("This is on stream error: ",decoded);
       
-      },   
-      onFinish(data){
-        console.log(data.usage);
-      }   
+      },  
     });
     return result.toUIMessageStreamResponse({
       messageMetadata({ part }) {

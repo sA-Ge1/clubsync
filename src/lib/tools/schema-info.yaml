@@ -1,0 +1,322 @@
+schema_info:
+  version: 1
+  format: yaml
+
+sql_aliases:
+  transactions: t
+  students: s
+  inventory: i
+  clubs: c
+  faculty: f
+  memberships: m
+  departments: d
+  department_requests: dr
+  funds: fu
+  fund_documents: fd
+  auth: a
+
+alias_rules:
+  first_time_from_join_format: |
+    FROM transactions t
+    JOIN students s
+    JOIN inventory i
+    JOIN clubs c
+    JOIN faculty f
+    JOIN memberships m
+    JOIN departments d
+    JOIN department_requests dr
+    JOIN funds fu
+    JOIN fund_documents fd
+    JOIN auth a
+  after_alias_use_only: "t, s, i, c, f, m, d, dr, fu, fd, a"
+  invalid_if_table_repeated_after_alias: true
+
+column_header_rules:
+  require_alias: true
+  alias_format: double_quotes
+  examples:
+    - "s.name AS \"Student Name\""
+    - "i.description AS \"Item Description\""
+    - "t.date_of_issue AS \"Borrow Date\""
+  never_return_raw_column_names: true
+
+sql_rules:
+  - ONLY SELECT queries
+  - Use ONLY columns from the schema
+  - ALWAYS use explicit JOINs
+  - Follow the join paths exactly
+  - Respect transaction status meanings
+
+language_rules:
+  - In Understanding and SQL Plan, describe columns in human terms, but you may reference actual column names internally.
+  - Use human terms like "club name", "number of members", "faculty in charge".
+  - Column names are only allowed inside the SQL query.
+
+tables:
+  students:
+    pk: usn
+    columns:
+      usn: unique student identifier
+      name: student full name
+      email: student email address
+      semester: current semester number of the student
+      dept_id: department the student belongs to
+
+  faculty:
+    pk: faculty_id
+    columns:
+      faculty_id: unique faculty identifier
+      name: faculty full name
+      email: faculty email address
+      dept_id: department the faculty belongs to
+
+  departments:
+    pk: dept_id
+    columns:
+      dept_id: unique department identifier
+      name: department name
+      hod: faculty_id who is head of this department
+      description: details about the department
+
+  clubs:
+    pk: club_id
+    columns:
+      club_id: unique club identifier
+      name: official club name
+      technical: true if club is technical, false if cultural/non-technical
+      description: about the club and its activities
+      faculty_id: faculty coordinator or owner of the club
+      email: official club contact email
+
+  memberships:
+    pk: member_id
+    columns:
+      member_id: unique membership record
+      usn: student who is a member of a club
+      club_id: club the student belongs to
+      role: position of the student in the club
+
+  inventory:
+    pk: inventory_id
+    columns:
+      inventory_id: unique inventory item
+      club_id: club that owns this inventory item
+      name: inventory item name
+      description: details of the item
+      quantity: total quantity owned by the club
+      cost: cost per item
+      image: image URL or path of the item
+      is_public: true if item is visible or borrowable by other clubs
+
+  transactions:
+    pk: transaction_id
+    columns:
+      transaction_id: unique borrowing transaction
+      student_id: student who is borrowing the item
+      borrower_club_id: club to which the borrowing student belongs; NOT the lending club
+      inventory_id: item being borrowed; lending club must be derived from inventory.club_id
+      quantity: number of items borrowed
+      date_of_issue: when item was issued
+      due_date: when item must be returned
+      message: borrow request message from student
+      updated_at: last status update time
+      status: current lifecycle stage of the borrowing process
+
+  department_requests:
+    pk: request_id
+    columns:
+      request_id: unique department approval request
+      dept_id: department that must approve this borrowing
+      usn: student requesting the borrowing
+      transaction_id: transaction that requires department approval
+      created_at: time when approval was requested
+
+  funds:
+    pk: fund_id
+    columns:
+      fund_id: unique fund record
+      amount: money involved in this entry
+      description: reason for expense or income
+      club_id: club this fund entry belongs to
+      is_credit: true equals income, false equals expense
+      type: category code of income or expense
+      bill_date: date on the bill or transaction
+      name: title of this fund entry
+      is_trashed: true if entry is soft-deleted
+      submitted_by: club member who submitted this record
+
+  fund_documents:
+    pk: id
+    columns:
+      id: unique document record
+      fund_id: fund entry this document belongs to
+      file_name: original file name
+      file_path: storage path of the file
+      mime_type: file type
+      file_size: size of file in bytes
+      uploaded_by: user who uploaded the document; refers to id of authenticated user from auth table
+      created_at: upload timestamp
+      is_deleted: true if document is soft-deleted
+
+  auth:
+    pk: id
+    columns:
+      id: unique auth record; matches auth.users.id
+      email: user email address, unique
+      role: user role, default notset, can be student, faculty, club, or admin
+      student_id: students.usn
+      faculty_id: faculty.faculty_id
+      club_id: clubs.club_id
+
+transaction_status:
+  "0": PROCESSING
+  "1": DEPARTMENT_APPROVAL_PENDING
+  "2": DEPARTMENT_REJECTED (terminal)
+  "3": DEPARTMENT_APPROVED
+  "4": CLUB_REJECTED (terminal)
+  "5": CLUB_APPROVED
+  "6": COLLECTED
+  "7": OVERDUE
+  "8": RETURNED (terminal)
+transaction_lifecycle_rules:
+  description: |
+    Transaction status represents a finite state machine (FSM). Each transaction progresses forward through defined stages.
+    Status transitions are strictly forward-only and irreversible unless explicitly defined. Terminal states cannot transition further.
+
+  forward_only: true
+  no_backward_transitions: true
+
+  ownership_rule:
+    collected_means_possession_transferred: true
+    description: |
+      When status = 6 (COLLECTED), the student has physically received the item(s).
+      The item is considered in the student's possession until status becomes RETURNED (8).
+
+  terminal_states:
+    - 2  # DEPARTMENT_REJECTED
+    - 4  # CLUB_REJECTED
+    - 8  # RETURNED
+
+  valid_transitions:
+    "0": [1, 5]        # PROCESSING → DEPARTMENT_APPROVAL_PENDING or CLUB_APPROVED (if department approval not required)
+    "1": [2, 3]        # DEPARTMENT_APPROVAL_PENDING → DEPARTMENT_REJECTED or DEPARTMENT_APPROVED
+    "3": [4, 5]        # DEPARTMENT_APPROVED → CLUB_REJECTED or CLUB_APPROVED
+    "5": [6]           # CLUB_APPROVED → COLLECTED
+    "6": [7, 8]        # COLLECTED → OVERDUE or RETURNED
+    "7": [8]           # OVERDUE → RETURNED
+
+  semantic_meanings:
+    "0": Request created, validation in progress
+    "1": Awaiting department approval
+    "2": Rejected by department, process terminated
+    "3": Approved by department, awaiting club decision
+    "4": Rejected by lending club, process terminated
+    "5": Approved by lending club, ready for pickup
+    "6": Student has collected the item, possession transferred
+    "7": Item not returned by due date, still in student possession
+    "8": Item returned, transaction fully completed
+
+  possession_states:
+    student_has_item: [6, 7]
+    club_has_item: [5, 8]
+    no_transfer_yet: [0, 1, 3]
+
+  completion_definition:
+    description: Transaction is fully complete ONLY when status = RETURNED (8)
+
+department_approval_rule: Department approval required ONLY if borrower is NOT in lending club.
+
+join_paths:
+  - name: Student -> Club
+    path:
+      - "FROM students s"
+      - "JOIN memberships m ON s.usn = m.usn"
+      - "JOIN clubs c ON m.club_id = c.club_id"
+
+  - name: Club -> Faculty Coordinator
+    path:
+      - "FROM clubs c"
+      - "JOIN faculty f ON c.faculty_id = f.faculty_id"
+
+  - name: Inventory -> Lending Club
+    path:
+      - "FROM inventory i"
+      - "JOIN clubs c ON i.club_id = c.club_id"
+
+  - name: Transaction -> Borrowing Student
+    path:
+      - "FROM transactions t"
+      - "JOIN students s ON t.student_id = s.usn"
+
+  - name: Transaction -> Lending Club (critical)
+    note: Lending club is ALWAYS derived from inventory.club_id. NEVER use borrower_club_id to find the lending club.
+    path:
+      - "FROM transactions t"
+      - "JOIN inventory i ON t.inventory_id = i.inventory_id"
+      - "JOIN clubs c ON i.club_id = c.club_id"
+
+  - name: Transaction -> Borrower Club
+    path:
+      - "JOIN clubs c ON t.borrower_club_id = c.club_id"
+
+  - name: Department Approval Chain
+    path:
+      - "FROM department_requests dr"
+      - "JOIN transactions t ON dr.transaction_id = t.transaction_id"
+      - "JOIN students s ON dr.usn = s.usn"
+      - "JOIN departments d ON dr.dept_id = d.dept_id"
+
+  - name: Auth -> Student (role = student)
+    path:
+      - "FROM auth a"
+      - "JOIN students s ON a.student_id = s.usn"
+      - "WHERE a.role = 'student'"
+
+  - name: Auth -> Faculty (role = faculty)
+    path:
+      - "FROM auth a"
+      - "JOIN faculty f ON a.faculty_id = f.faculty_id"
+      - "WHERE a.role = 'faculty'"
+
+  - name: Auth -> Club (role = club)
+    path:
+      - "FROM auth a"
+      - "JOIN clubs c ON a.club_id = c.club_id"
+      - "WHERE a.role = 'club'"
+
+  - name: Funds -> Club
+    path:
+      - "FROM funds fu"
+      - "JOIN clubs c ON fu.club_id = c.club_id"
+
+  - name: Club -> Department (indirect)
+    note: A club has NO direct relationship to a department. Use this path only.
+    path:
+      - "FROM clubs c"
+      - "JOIN memberships m ON c.club_id = m.club_id"
+      - "JOIN students s ON m.usn = s.usn"
+      - "JOIN departments d ON s.dept_id = d.dept_id"
+
+fund_type_codes:
+  expense:
+    "0": ADMINISTRATIVE
+    "1": EVENT
+    "2": PROMOTIONAL
+    "3": EQUIPMENT
+    "4": TRAINING
+    "5": MISC
+    "6": OTHER_EXP
+  income:
+    "7": COLLEGE
+    "8": SPONSORS
+    "9": WORKSHOPS
+    "10": MEMBERS_CONTRIBUTION
+    "11": SERVICES
+    "12": OTHER_INC
+
+strict_rules:
+  - ONLY SELECT queries.
+  - NEVER use columns not listed above.
+  - ALWAYS use explicit JOINs.
+  - Use table aliases.
+  - Respect transaction status meanings when answering.

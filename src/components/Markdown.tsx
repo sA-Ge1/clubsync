@@ -2,6 +2,102 @@ import React, { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import  { useState, ComponentProps } from "react";
+import { Copy, Check } from "lucide-react";
+import "highlight.js/styles/github-dark.css";
+type CodeProps = ComponentProps<"code"> & {
+  inline?: boolean;
+};
+
+export function CodeBlock({
+  inline,
+  className,
+  children,
+  ...props
+}: CodeProps) {
+  const [copied, setCopied] = useState(false);
+
+  
+function extractText(node: React.ReactNode): string {
+  if (typeof node === "string") return node;
+
+  if (typeof node === "number") return String(node);
+
+  if (Array.isArray(node))
+    return node.map(extractText).join("");
+
+  if (React.isValidElement(node)) {
+    const element = node as React.ReactElement<{ children?: React.ReactNode }>;
+    return extractText(element.props.children);
+  }
+
+  return "";
+}
+const code = extractText(children ?? "")
+const languageMatch = className?.match(/language-(\w+)/);
+const language = languageMatch?.[1] || "code";
+
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+  const isBlock = className?.includes("language-");
+
+  if (!isBlock) {
+  return (
+    <code
+      className="
+        px-2 py-1
+        rounded-md
+        bg-muted
+        font-mono
+        text-[0.9em]
+      "
+      {...props}
+    >
+      {children}
+    </code>
+  );
+}
+
+
+  return (
+    <div className="my-4 rounded-lg border bg-muted/40 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-1.5 text-xs border-b bg-muted/60">
+        <span className="font-mono text-muted-foreground">
+          {language}
+        </span>
+
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition"
+        >
+          {copied ? (
+            <>
+              <Check size={14} />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy size={14} />
+              Copy
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Code */}
+      <pre className="overflow-x-auto text-sm">
+        <code className={className} {...props}>
+          {children}
+        </code>
+      </pre>
+    </div>
+  );
+}
 
 function MarkdownComponent({ content }: { content: string }) {
   return (
@@ -47,23 +143,7 @@ function MarkdownComponent({ content }: { content: string }) {
               {children}
             </td>
           ),
-          code({ className, children }) {
-            const isBlock = !!className;
-
-            if (!isBlock) {
-              return (
-                <code className="px-1.5 py-0.5 rounded bg-muted text-sm">
-                  {children}
-                </code>
-              );
-            }
-
-            return (
-              <pre className="bg-black text-white p-4 rounded-lg overflow-x-auto text-sm">
-                <code className={className}>{children}</code>
-              </pre>
-            );
-          },
+          code: CodeBlock,
         }}
       >
         {content}

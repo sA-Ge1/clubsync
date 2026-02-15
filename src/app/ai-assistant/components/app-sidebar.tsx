@@ -103,7 +103,7 @@ export function AppSidebar({
   };
   return (
     <Sidebar {...props}>
-      <SidebarHeader className="p-4 border-b">
+      <SidebarHeader className="p-2 pb-3 border-b w-full flex items-center">
         <Button
           onClick={() => onOpenChat("new")}
           className="w-full justify-start items-center gap-2"
