@@ -61,6 +61,8 @@ import {
   RefreshCcw,
   RefreshCw,
   Square,
+  Volume2,
+  VolumeOff,
 } from "lucide-react";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import { cn } from "@/lib/utils";
@@ -76,6 +78,7 @@ import { useRouter } from "next/navigation";
 import { ScrollButton } from "@/components/ui/scroll-button";
 import { SystemMessage } from "@/components/ui/system-message";
 import { marked } from "marked";
+import removeMarkdown from "remove-markdown";
 export const ChatMessage = memo(function ChatMessage({
   message,
   status,
@@ -83,6 +86,8 @@ export const ChatMessage = memo(function ChatMessage({
   setCopiedId,
   onRegenerate,
   isLastAssistant,
+  speakingId,
+  onReadAloud,
 }: any) {
   const isAssistant = message.role === "assistant";
 
@@ -173,6 +178,7 @@ export const ChatMessage = memo(function ChatMessage({
             : "self-end group-hover:opacity-100 transition",
         )}
       >
+        
         <MessageAction tooltip="Copy to clipboard">
           <Button
             variant="ghost"
@@ -187,6 +193,22 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </Button>
         </MessageAction>
+        {isAssistant && (
+          <MessageAction tooltip={speakingId === message.id ? "Stop reading" : "Read aloud"}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => onReadAloud(message)}
+            >
+              {speakingId === message.id ? (
+                <VolumeOff className="size-4" />
+              ) : (
+                <Volume2 className="size-4" />
+              )}
+            </Button>
+          </MessageAction>
+        )}
         {isAssistant && isLastAssistant && (
           <MessageAction tooltip="Regenerate response">
             <Button
@@ -406,6 +428,7 @@ export default function Page() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [usageDialogOpen, setUsageDialogOpen] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
   /* ---------------- AUTH GUARD ---------------- */
 
   useEffect(() => {
@@ -693,7 +716,37 @@ useEffect(() => {
     });
   }
 
+  function handleReadAloud(message: any) {
+    const plainText = removeMarkdown(getMessageText(message));
+
+    // If already speaking this message, stop
+    if (speakingId === message.id) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+
+    // Cancel any other speech
+    window.speechSynthesis.cancel();
+    setSpeakingId(message.id);
+
+    const utterance = new SpeechSynthesisUtterance(plainText);
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+
+    window.speechSynthesis.speak(utterance);
+  }
+
   /* ---------------- UTIL ---------------- */
+
+  function getMessageText(message: any): string {
+    if (!message?.parts) return "";
+
+    return message.parts
+      .filter((p: any) => p.type === "text")
+      .map((p: any) => p.text)
+      .join("");
+  }
 
   function openChat(id: string) {
     router.push(`/ai-assistant/${id}`);
@@ -882,6 +935,8 @@ useEffect(() => {
                         setCopiedId={setCopiedId}
                         onRegenerate={handleRegenerate}
                         isLastAssistant={m.id === lastAssistantId}
+                        speakingId={speakingId}
+                        onReadAloud={handleReadAloud}
                       />
                     ))
                   )}
