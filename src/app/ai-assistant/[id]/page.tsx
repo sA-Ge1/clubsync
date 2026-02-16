@@ -1,9 +1,9 @@
-'use client'
-import{ memo, useMemo, useRef } from "react";
+"use client";
+import { memo, useMemo, useRef } from "react";
 import type { UIMessage } from "ai";
-import { AppSidebar } from "../components/app-sidebar"
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+import { AppSidebar } from "../components/app-sidebar";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -16,9 +16,8 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@/components/ui/sidebar'
-import { useParams } from "next/navigation"
-
+} from "@/components/ui/sidebar";
+import { useParams } from "next/navigation";
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
@@ -28,7 +27,7 @@ import {
   PromptInputAction,
   PromptInputActions,
   PromptInputTextarea,
-} from "@/components/ui/prompt-input"
+} from "@/components/ui/prompt-input";
 import {
   Table,
   TableBody,
@@ -38,9 +37,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tool } from "@/components/ui/tool";
-import { ChatContainerContent,ChatContainerRoot,ChatContainerScrollAnchor } from "@/components/ui/chat-container";
-import { Message,MessageContent,MessageAction,MessageActions } from "@/components/ui/message";
-import { ArrowUp, ChartNoAxesColumn, CheckCheck, Copy, Download, Eye, FileText, Home, Loader2, RefreshCcw, RefreshCw, Square } from "lucide-react";
+import {
+  ChatContainerContent,
+  ChatContainerRoot,
+  ChatContainerScrollAnchor,
+} from "@/components/ui/chat-container";
+import {
+  Message,
+  MessageContent,
+  MessageAction,
+  MessageActions,
+} from "@/components/ui/message";
+import {
+  ArrowUp,
+  ChartNoAxesColumn,
+  CheckCheck,
+  Copy,
+  Download,
+  Eye,
+  FileText,
+  Home,
+  Loader2,
+  RefreshCcw,
+  RefreshCw,
+  Square,
+} from "lucide-react";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import { cn } from "@/lib/utils";
 import { useKeyVault } from "@/components/ui/useKeyVault";
@@ -86,9 +107,11 @@ export const ChatMessage = memo(function ChatMessage({
 
   return (
     <Message
-    
-      className={cn("gap-1",
-        isAssistant ? "justify-start flex-col group" : "justify-end flex-col group"
+      className={cn(
+        "gap-1",
+        isAssistant
+          ? "justify-start flex-col group"
+          : "justify-end flex-col group",
       )}
     >
       <div
@@ -96,7 +119,7 @@ export const ChatMessage = memo(function ChatMessage({
           "break-words min-w-0",
           isAssistant
             ? "max-w-full"
-            : "max-w-[80%] sm:max-w-[50%] ml-auto w-fit min-w-[40px]"
+            : "max-w-[80%] sm:max-w-[50%] ml-auto w-fit min-w-[40px]",
         )}
       >
         {message.parts.map((part: any, i: number) => {
@@ -142,7 +165,14 @@ export const ChatMessage = memo(function ChatMessage({
         })}
       </div>
 
-      <MessageActions className={cn("opacity-0", isAssistant ? "opacity-100 self-start" : "self-end group-hover:opacity-100 transition")}>
+      <MessageActions
+        className={cn(
+          "opacity-0",
+          isAssistant
+            ? "opacity-100 self-start"
+            : "self-end group-hover:opacity-100 transition",
+        )}
+      >
         <MessageAction tooltip="Copy to clipboard">
           <Button
             variant="ghost"
@@ -175,14 +205,14 @@ export const ChatMessage = memo(function ChatMessage({
   );
 });
 
-  function getMessageText(message: any): string {
-    if (!message?.parts) return "";
+function getMessageText(message: any): string {
+  if (!message?.parts) return "";
 
-    return message.parts
-      .filter((p: any) => p.type === "text")
-      .map((p: any) => p.text)
-      .join("");
-  }
+  return message.parts
+    .filter((p: any) => p.type === "text")
+    .map((p: any) => p.text)
+    .join("");
+}
 const TextPart = memo(function TextPart({
   text,
   isAssistant,
@@ -204,8 +234,6 @@ const TextPart = memo(function TextPart({
     </MessageContent>
   );
 });
-
-
 
 function ReportDownload({ output }: { output: any }) {
   const downloadPDF = () => {
@@ -252,7 +280,8 @@ function ReportDownload({ output }: { output: any }) {
         <div className="space-y-1">
           <h4 className="font-semibold text-sm">Report Generated</h4>
           <p className="text-xs text-muted-foreground">
-            {output.club_name} • {output.time_period} • {output.fund_count} transactions
+            {output.club_name} • {output.time_period} • {output.fund_count}{" "}
+            transactions
           </p>
         </div>
         <FileText className="h-5 w-5 text-muted-foreground" />
@@ -261,15 +290,21 @@ function ReportDownload({ output }: { output: any }) {
       <div className="grid grid-cols-4 gap-2 text-xs">
         <div className="space-y-1">
           <p className="text-muted-foreground">Income</p>
-          <p className="font-semibold">₹{output.total_income?.toLocaleString("en-IN")}</p>
+          <p className="font-semibold">
+            ₹{output.total_income?.toLocaleString("en-IN")}
+          </p>
         </div>
         <div className="space-y-1">
           <p className="text-muted-foreground">Expenditure</p>
-          <p className="font-semibold">₹{output.total_expenditure?.toLocaleString("en-IN")}</p>
+          <p className="font-semibold">
+            ₹{output.total_expenditure?.toLocaleString("en-IN")}
+          </p>
         </div>
         <div className="space-y-1">
           <p className="text-muted-foreground">Net Balance</p>
-          <p className="font-semibold">₹{output.net_balance?.toLocaleString("en-IN")}</p>
+          <p className="font-semibold">
+            ₹{output.net_balance?.toLocaleString("en-IN")}
+          </p>
         </div>
         <div className="space-y-1">
           <p className="text-muted-foreground">Members</p>
@@ -278,11 +313,22 @@ function ReportDownload({ output }: { output: any }) {
       </div>
 
       <div className="flex gap-2">
-        <Button size="sm" onClick={downloadPDF} disabled={!output.pdf_data} className="flex-1">
+        <Button
+          size="sm"
+          onClick={downloadPDF}
+          disabled={!output.pdf_data}
+          className="flex-1"
+        >
           <Download className="mr-2 h-4 w-4" />
           {!output.pdf_data ? "PDF expired" : "Download PDF"}
         </Button>
-        <Button size="sm" variant="outline" onClick={viewPDF} disabled={!output.pdf_data}  className="flex-1">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={viewPDF}
+          disabled={!output.pdf_data}
+          className="flex-1"
+        >
           <Eye className="mr-2 h-4 w-4" />
           {!output.pdf_data ? "PDF expired" : "View PDF"}
         </Button>
@@ -291,22 +337,20 @@ function ReportDownload({ output }: { output: any }) {
   );
 }
 
-
-
 function removeToolResults(messages: UIMessage[]) {
   return messages.map((msg) => ({
     ...msg,
     parts: (Array.isArray(msg.parts) ? msg.parts : []).filter(
       (part: any) =>
-        !(typeof part.type === "string" && part.type.startsWith("tool-"))
+        !(typeof part.type === "string" && part.type.startsWith("tool-")),
     ),
   }));
 }
 
-
-
 async function loadChatFromDB(chatId: string) {
-  const res = await fetch(`/api/chats/${chatId}/messages`,{credentials: "include",});
+  const res = await fetch(`/api/chats/${chatId}/messages`, {
+    credentials: "include",
+  });
   if (!res.ok) return [];
 
   const dbMessages = await res.json();
@@ -319,19 +363,18 @@ async function loadChatFromDB(chatId: string) {
   }));
 }
 
-
 interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
 }
 async function saveTurnToDB(
   user: any,
   assistant: any,
   chatId: string,
   isFirstTurn: boolean,
-  isRegenerate: boolean = false
+  isRegenerate: boolean = false,
 ) {
   await fetch("/api/messages", {
     method: "POST",
@@ -346,8 +389,6 @@ async function saveTurnToDB(
     }),
   });
 }
-
-
 
 export default function Page() {
   const params = useParams();
@@ -365,7 +406,6 @@ export default function Page() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [usageDialogOpen, setUsageDialogOpen] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  
   /* ---------------- AUTH GUARD ---------------- */
 
   useEffect(() => {
@@ -387,8 +427,6 @@ export default function Page() {
 
   /* ---------------- CHAT HOOK ---------------- */
 
-
-
   const {
     messages,
     sendMessage,
@@ -396,7 +434,7 @@ export default function Page() {
     error,
     stop,
     setMessages,
-    regenerate
+    regenerate,
   } = useChat({
     id: chatId === "new" ? undefined : chatId,
     transport: new DefaultChatTransport({
@@ -436,12 +474,18 @@ export default function Page() {
         .slice(0, -1)
         .reverse()
         .find((m) => m.role === "user");
-    
+
       if (!user || !user.id) return;
-    
+
       try {
-        await saveTurnToDB(user, assistant, chatId, messages.length === 2, false);
-      
+        await saveTurnToDB(
+          user,
+          assistant,
+          chatId,
+          messages.length === 2,
+          false,
+        );
+
         if (messages.length === 2) {
           loadChats();
         }
@@ -449,22 +493,11 @@ export default function Page() {
         console.error("Failed to save turn to DB:", error);
       }
     },
-    onError: async(error)=>{
+    onError: async (error) => {
       console.log("Chat error:", error);
-    }
+    },
   });
 
-  useEffect(() => {
-    if (chatId === "new") return;
-  
-    const first = sessionStorage.getItem("firstMessage");
-    if (!first) return;
-  
-    sessionStorage.removeItem("firstMessage");
-  
-    // set input so UI shows it
-    setInput(first);
-  }, [chatId]);
 
   const lastAssistantId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -475,104 +508,118 @@ export default function Page() {
     return null;
   }, [messages]);
 
-const usageRecords = useMemo(() => {
-  return messages
-    .map((message: any, index: number) => {
-      const usage = message?.metadata?.usage;
-      if (!usage) return null;
+  const usageRecords = useMemo(() => {
+    return messages
+      .map((message: any, index: number) => {
+        const usage = message?.metadata?.usage;
+        if (!usage) return null;
 
-      const noCacheTokens =
-      usage?.inputTokenDetails?.noCacheTokens !== undefined
-        ? usage.inputTokenDetails.noCacheTokens
-        : usage.inputTokens - (usage.cachedInputTokens ?? 0);
+        const noCacheTokens =
+          usage?.inputTokenDetails?.noCacheTokens !== undefined
+            ? usage.inputTokenDetails.noCacheTokens
+            : usage.inputTokens - (usage.cachedInputTokens ?? 0);
 
+        const cachedTokens =
+          usage?.cachedInputTokens ??
+          usage?.inputTokenDetails?.cacheReadTokens ??
+          0;
 
-      const cachedTokens =
-        usage?.cachedInputTokens ??
-        usage?.inputTokenDetails?.cacheReadTokens ??
-        0;
+        return {
+          index: index + 1,
+          id: message.id,
+          role: message.role,
+          usage: {
+            // BILLABLE
+            inputTokens: noCacheTokens,
 
-      return {
-        index: index + 1,
-        id: message.id,
-        role: message.role,
-        usage: {
-          // BILLABLE
-          inputTokens: noCacheTokens,
+            // FREE
+            cachedInputTokens: cachedTokens,
 
-          // FREE
-          cachedInputTokens: cachedTokens,
+            // BILLABLE
+            outputTokens: usage?.outputTokens ?? 0,
 
-          // BILLABLE
-          outputTokens: usage?.outputTokens ?? 0,
-
-          // COMPUTE TOTAL (includes cache)
-          totalTokens: usage?.totalTokens ?? 0,
-        },
+            // COMPUTE TOTAL (includes cache)
+            totalTokens: usage?.totalTokens ?? 0,
+          },
+        };
+      })
+      .filter(Boolean) as {
+      index: number;
+      id: string;
+      role: string;
+      usage: {
+        inputTokens: number;
+        cachedInputTokens: number;
+        outputTokens: number;
+        totalTokens: number;
       };
-    })
-    .filter(Boolean) as {
-    index: number;
-    id: string;
-    role: string;
-    usage: {
-      inputTokens: number;
-      cachedInputTokens: number;
-      outputTokens: number;
-      totalTokens: number;
-    };
-  }[];
-}, [messages]);
+    }[];
+  }, [messages]);
 
-const usageTotals = useMemo(() => {
-  return usageRecords.reduce(
-    (acc, record) => {
-      acc.inputTokens += record.usage.inputTokens;
-      acc.cachedInputTokens += record.usage.cachedInputTokens;
-      acc.outputTokens += record.usage.outputTokens;
-      acc.totalTokens += record.usage.totalTokens;
-      return acc;
-    },
-    {
-      inputTokens: 0,
-      cachedInputTokens: 0,
-      outputTokens: 0,
-      totalTokens: 0,
-    }
-  );
-}, [usageRecords]);
-
-
-
-  
-  
+  const usageTotals = useMemo(() => {
+    return usageRecords.reduce(
+      (acc, record) => {
+        acc.inputTokens += record.usage.inputTokens;
+        acc.cachedInputTokens += record.usage.cachedInputTokens;
+        acc.outputTokens += record.usage.outputTokens;
+        acc.totalTokens += record.usage.totalTokens;
+        return acc;
+      },
+      {
+        inputTokens: 0,
+        cachedInputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+      },
+    );
+  }, [usageRecords]);
 
   /* ---------------- LOAD CHAT META + HISTORY ---------------- */
-
-  useEffect(() => {
-    if (chatId === "new") return;
-  
-    async function init() {
+async function init() {
+    try {
       setIsLoadingHistory(true);
-      try {
-        // 1️⃣ Load chat meta
-        const res = await fetch(`/api/chats/${chatId}`);
-        const chat = await res.json();
-    
-        setSelectedModel(chat.model_id);
-        setMode(chat.mode);
-    
-        // 2️⃣ Load history
+
+      // Load chat meta
+      const res = await fetch(`/api/chats/${chatId}`);
+      const chat = await res.json();
+
+      setSelectedModel(chat.model_id);
+      setMode(chat.mode);
+
+      // Load history
+      const first = sessionStorage.getItem("firstMessage");
+
+      if (first) {
+        send(first, chat.model_id, chat.mode);
+        sessionStorage.removeItem("firstMessage");
+      } else {
         const history: UIMessage[] = await loadChatFromDB(chatId);
         setMessages(history);
-      } finally {
-        setIsLoadingHistory(false);
       }
+
+    } finally {
+      setIsLoadingHistory(false);
     }
-  
-    init();
-  }, [chatId]);
-  
+  }
+const lastLoadedChatIdRef = useRef<string | null>(null);
+
+useEffect(() => {
+  // Wait until chat system ready
+  if (status !== "ready") return;
+
+  // Ignore new chat placeholder
+  if (chatId === "new") return;
+
+  // If this chat was already loaded, skip
+  if (lastLoadedChatIdRef.current === chatId) return;
+
+  // Mark this chat as loaded
+  lastLoadedChatIdRef.current = chatId;
+  init();
+
+}, [chatId, status]);
+
+
 
   /* ---------------- LOAD SIDEBAR CHATS ---------------- */
   async function loadChats() {
@@ -583,17 +630,17 @@ const usageTotals = useMemo(() => {
     setChatList(data);
   }
   useEffect(() => {
-
     loadChats();
   }, [chatId]);
 
   /* ---------------- SEND FUNCTION ---------------- */
 
-  async function send(message?:string) {
-    if (!input.trim() && !message) return; 
+  async function send(message?: string,modelIdOvr?: string,modeOvr?: AIMode) {
+    if (!input.trim() && !message) return;
     const text = message || input;
     setInput("");
-
+    console.log("Model override:", modelIdOvr, "Mode override:", modeOvr);
+    console.log("Selected model:", selectedModel, "Mode:", mode);
     // NEW CHAT → server handles first exchange
     if (chatId === "new") {
       const res = await fetch("/api/chats", {
@@ -604,12 +651,12 @@ const usageTotals = useMemo(() => {
           mode,
         }),
       });
-      
+
       const data = await res.json();
-    
+
       // store first message temporarily
       sessionStorage.setItem("firstMessage", text);
-    
+
       router.replace(`/ai-assistant/${data.id}`);
       return;
     }
@@ -617,16 +664,16 @@ const usageTotals = useMemo(() => {
     const { provider } = parseModelValue(selectedModel);
     const userApiKey = keys[provider];
 
-    sendMessage( 
+    sendMessage(
       { text },
       {
         body: {
-          mode,
-          modelId: selectedModel,
+          mode: modeOvr || mode,
+          modelId: modelIdOvr || selectedModel,
           userApiKey,
           chatId,
         },
-      }
+      },
     );
   }
 
@@ -648,12 +695,9 @@ const usageTotals = useMemo(() => {
 
   /* ---------------- UTIL ---------------- */
 
-
-
   function openChat(id: string) {
     router.push(`/ai-assistant/${id}`);
   }
-
 
   if (!user || loading) {
     return (
@@ -665,9 +709,6 @@ const usageTotals = useMemo(() => {
 
   /* ---------------- RETURN STARTS BELOW ---------------- */
 
-
-
-
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebar
@@ -675,337 +716,336 @@ const usageTotals = useMemo(() => {
         activeChatId={chatId}
         onOpenChat={openChat}
         refreshChats={loadChats}
-        
       />
 
-<SidebarInset className="h-screen overflow-hidden">
-
-
+      <SidebarInset className="h-screen overflow-hidden">
         <header className="flex h-14 shrink-0 items-center justify-between px-4 border-b bg-background/80 backdrop-blur">
-        <div className="flex items-center w-full justify-between gap-2">
-
+          <div className="flex items-center w-full justify-between gap-2">
             <div className="flex items-center">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <h1 className="text-sm font-medium tracking-wide text-muted-foreground" onClick={()=>console.log(removeToolResults(messages))}>
-                 ClubSync Assistant
-            </h1>
-
+              <SidebarTrigger className="-ml-1" />
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-[orientation=vertical]:h-4"
+              />
+              <h1
+                className="text-sm font-medium tracking-wide text-muted-foreground"
+                onClick={() => console.log(removeToolResults(messages))}
+              >
+                ClubSync Assistant
+              </h1>
             </div>
             <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/")}
-              className="gap-2 rounded-lg  text-foreground hover:text-foreground"
-              
-            >
-              <Home />
-            </Button>
-            <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="gap-2 rounded-lg text-foreground hover:text-foreground"
-                  aria-label="View chat usage"
-                >
-                  <ChartNoAxesColumn className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-                <DialogHeader className="shrink-0">
-                  <DialogTitle>Chat Usage</DialogTitle>
-                  <DialogDescription>
-                    Token usage for this conversation is stored temporarily in
-                    memory.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-4 gap-3 shrink-0">
-                  <div className="rounded-lg border px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Prompt</p>
-                    <p className="text-lg font-semibold">
-                      {usageTotals.inputTokens}
-                    </p>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/")}
+                className="gap-2 rounded-lg  text-foreground hover:text-foreground"
+              >
+                <Home />
+              </Button>
+              <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="gap-2 rounded-lg text-foreground hover:text-foreground"
+                    aria-label="View chat usage"
+                  >
+                    <ChartNoAxesColumn className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+                  <DialogHeader className="shrink-0">
+                    <DialogTitle>Chat Usage</DialogTitle>
+                    <DialogDescription>
+                      Token usage for this conversation is stored temporarily in
+                      memory.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-4 gap-3 shrink-0">
+                    <div className="rounded-lg border px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Prompt</p>
+                      <p className="text-lg font-semibold">
+                        {usageTotals.inputTokens}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Cache</p>
+                      <p className="text-lg font-semibold">
+                        {usageTotals.cachedInputTokens}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Reply</p>
+                      <p className="text-lg font-semibold">
+                        {usageTotals.outputTokens}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Total</p>
+                      <p className="text-lg font-semibold">
+                        {usageTotals.totalTokens}
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-lg border px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Cache</p>
-                    <p className="text-lg font-semibold">
-                      {usageTotals.cachedInputTokens}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Reply</p>
-                    <p className="text-lg font-semibold">
-                      {usageTotals.outputTokens}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="text-lg font-semibold">
-                      {usageTotals.totalTokens}
-                    </p>
-                  </div>
-                </div>
-                {usageRecords.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    No usage data yet. Send a message to populate usage stats.
-                  </div>
-                ) : (
-                  <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
-                    <Table className="w-full">
-                      <TableHeader className="sticky top-0 bg-background z-10">
-                        <TableRow>
-                          <TableHead className="w-16">Turn</TableHead>
-                          <TableHead className="w-24">Role</TableHead>
-                          <TableHead className="text-right">Prompt</TableHead>
-                          <TableHead className="text-right">Cached</TableHead> 
-                          <TableHead className="text-right">Reply</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {usageRecords.map((record) => (
-                          <TableRow key={record.id}>
-                            <TableCell>{record.index-1}</TableCell>
-                            <TableCell className="capitalize">
-                              {record.role}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {record.usage.inputTokens ?? 0}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {record.usage.cachedInputTokens ?? 0}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {record.usage.outputTokens ?? 0}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {record.usage.totalTokens ?? 0}
-                            </TableCell>
+                  {usageRecords.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                      No usage data yet. Send a message to populate usage stats.
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
+                      <Table className="w-full">
+                        <TableHeader className="sticky top-0 bg-background z-10">
+                          <TableRow>
+                            <TableHead className="w-16">Turn</TableHead>
+                            <TableHead className="w-24">Role</TableHead>
+                            <TableHead className="text-right">Prompt</TableHead>
+                            <TableHead className="text-right">Cached</TableHead>
+                            <TableHead className="text-right">Reply</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-            <KeyManagerDialog />
-          </div>
+                        </TableHeader>
+                        <TableBody>
+                          {usageRecords.map((record) => (
+                            <TableRow key={record.id}>
+                              <TableCell>{record.index - 1}</TableCell>
+                              <TableCell className="capitalize">
+                                {record.role}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {record.usage.inputTokens ?? 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {record.usage.cachedInputTokens ?? 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {record.usage.outputTokens ?? 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {record.usage.totalTokens ?? 0}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+              <KeyManagerDialog />
+            </div>
           </div>
         </header>
 
         <div className="flex flex-1 min-h-0 flex-col w-full min-w-0 items-center overflow-hidden">
-
           {/* Messages Container */}
           <div className="h-full w-full max-w-6xl min-w-0 flex flex-col bg-background">
-
-
-  
-        {/* MESSAGES — ONLY SCROLL AREA */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-        <ChatContainerRoot className="relative h-full w-full items-center" key={chatId} >
-
-          <ChatContainerContent className="px-6 py-2 space-y-2 mt-10">
-            {isLoadingHistory ? (
-              <div className="flex flex-col gap-8 p-8 w-full">
-                {/* User */}
-                <div className="flex justify-end w-full">
-                  <div
-                    className="bg-muted rounded-3xl animate-pulse"
-                    style={{
-                      height: "10vh",
-                      width: "55%",
-                      minHeight: "120px",
-                    }}
-                  />
-                </div>
-
-                {/* Assistant */}
-                <div className="flex justify-start w-full">
-                  <div
-                    className="bg-muted rounded-3xl animate-pulse"
-                    style={{
-                      height: "30vh",
-                      width: "75%",
-                      minHeight: "120px",
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              messages.map((m) => (
-                <ChatMessage
-                  key={m.id}
-                  message={m}
-                isLast={m.id === messages[messages.length - 1]?.id}
-                status={status}
-                copiedId={copiedId}
-                setCopiedId={setCopiedId}
-                onRegenerate={handleRegenerate}
-                isLastAssistant={m.id === lastAssistantId}
-                
-              />
-            ))
-            )}
-            {error&&(
-              <SystemMessage variant="error" isIconHidden={false} className="relative w-auto self-start" cta={{label:<RefreshCw className="w-4 h-4 text-foreground" />,variant:"ghost",onClick:()=>{
-                if(status==="error"){
-                
-                  
-                  const lastUser = [...messages].reverse().find((m) => m.role === "user");
-                  setMessages(messages.slice(0, messages.length - 1));
-                  send(lastUser ? getMessageText(lastUser) : "");
-                }
-              }}}>
-                {typeof error.message=== "string"
-                  ? error.message
-                  : "An error occurred. Please try again."}
-              </SystemMessage>
-            )}
-    <ChatContainerScrollAnchor />
-
-    </ChatContainerContent>
-        {/* 🔥 Scroll button lives inside root, not outside */}
-        <div className="absolute bottom-6 right-6 z-10">
-      <ScrollButton />
-    </div>
-
-</ChatContainerRoot>
-
-       
-        </div>
-        {(chatId==="new"||messages.length==0&&!isLoadingHistory) && (
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="max-w-2xl w-full text-center space-y-2 px-6">
-              
-
-                {/* Title */}
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-semibold tracking-tight tracking-wider">
-                  <MorphingText className="text-foreground p-5" texts={["ClubSync" ,"Assistant"]} />
-                  </h2>
-                  <p className="text-muted-foreground text-sm" >
-                    Understand • Query • Analyze 
-                  </p>
-                </div>
-
-                {/* Suggestions */}
-                <div className="flex flex-wrap justify-center gap-3 pt-4">
-
-                  <PromptSuggestion
-                    className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20"
-                    onClick={() =>
-                      setInput(
-                        "Provide a clear explanation of the database schema, including all tables and their relationships."
-                      )
-                    }
-                  >
-                    Understand Schema
-                  </PromptSuggestion>
-
-                  <PromptSuggestion
-                    className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20"
-                    onClick={() =>
-                      setInput(
-                        "Show all inventory items that are currently borrowed, including who borrowed them and the borrow dates."
-                      )
-                    }
-                  >
-                    Track Inventory
-                  </PromptSuggestion>
-
-                  <PromptSuggestion
-                    className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                    onClick={() =>
-                      setInput(
-                        "Display complete details of all clubs along with the faculty members responsible for them."
-                      )
-                    }
-                  >
-                    View Club Info
-                  </PromptSuggestion>
-
-                  <PromptSuggestion
-                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20"
-                    onClick={() =>
-                      setInput(
-                        "Provide a detailed breakdown of all income records associated with the Astra Robotics club."
-                      )
-                    }
-                  >
-                    Analyze Income
-                  </PromptSuggestion>
-
-                </div>
-
-              </div>
-            </div>
-          )}
-
-  
-        {/* PROMPT — fixed */}
-        <div className="shrink-0 p-4">
-          
-          <PromptInput
-            value={input}
-            onValueChange={setInput}
-            isLoading={status === "streaming" || status === "submitted"}
-            onSubmit={()=>send()}
-            className="max-w-6xl mx-auto w-full"
-          >
-            <div className="flex w-full flex-col gap-4">
-          <div className="flex w-full">
-          <PromptInputTextarea placeholder="Ask me anything..." className="rounded-xl"/>
-          <PromptInputActions className="justify-end pt-2">
-            <PromptInputAction
-              tooltip={
-                status === "streaming" || status === "submitted"
-                  ? "Stop generation"
-                  : "Send message"
-              }
-            >
-              <Button
-                variant="default"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={()=>{
-                  if(status==="streaming"||status==="submitted")
-                  {
-                    stop();
-                  }
-                  else{
-                    send();
-                  }
-                }}
+            {/* MESSAGES — ONLY SCROLL AREA */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ChatContainerRoot
+                className="relative h-full w-full items-center"
+                key={chatId}
               >
-                {status === "streaming" || status === "submitted" ? (
-                  <Square className="size-5 fill-current" />
-                ) : (
-                  <ArrowUp className="size-5" />
-                )}
-              </Button>
-            </PromptInputAction>
-          </PromptInputActions>
-          </div >
-          <div className="flex items-center justify-between gap-2">
-            <ModelCombobox
-              value={selectedModel}
-              onChange={setSelectedModel}
-            />
-            <ModeToggle value={mode} onChange={setMode} />
-            
-          </div>
+                <ChatContainerContent className="px-6 py-2 space-y-2 mt-10">
+                  {isLoadingHistory ? (
+                    <div className="flex flex-col gap-8 p-8 w-full">
+                      {/* User */}
+                      <div className="flex justify-end w-full">
+                        <div
+                          className="bg-muted rounded-3xl animate-pulse"
+                          style={{
+                            height: "10vh",
+                            width: "55%",
+                            minHeight: "120px",
+                          }}
+                        />
+                      </div>
 
+                      {/* Assistant */}
+                      <div className="flex justify-start w-full">
+                        <div
+                          className="bg-muted rounded-3xl animate-pulse"
+                          style={{
+                            height: "30vh",
+                            width: "75%",
+                            minHeight: "120px",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    messages.map((m) => (
+                      <ChatMessage
+                        key={m.id}
+                        message={m}
+                        isLast={m.id === messages[messages.length - 1]?.id}
+                        status={status}
+                        copiedId={copiedId}
+                        setCopiedId={setCopiedId}
+                        onRegenerate={handleRegenerate}
+                        isLastAssistant={m.id === lastAssistantId}
+                      />
+                    ))
+                  )}
+                  {error && (
+                    <SystemMessage
+                      variant="error"
+                      isIconHidden={false}
+                      className="relative w-auto self-start"
+                      cta={{
+                        label: (
+                          <RefreshCw className="w-4 h-4 text-foreground" />
+                        ),
+                        variant: "ghost",
+                        onClick: () => {
+                          if (status === "error") {
+                            const lastUser = [...messages]
+                              .reverse()
+                              .find((m) => m.role === "user");
+                            setMessages(messages.slice(0, messages.length - 1));
+                            send(lastUser ? getMessageText(lastUser) : "");
+                          }
+                        },
+                      }}
+                    >
+                      {typeof error.message === "string"
+                        ? error.message
+                        : "An error occurred. Please try again."}
+                    </SystemMessage>
+                  )}
+                  <ChatContainerScrollAnchor />
+                </ChatContainerContent>
+                {/* 🔥 Scroll button lives inside root, not outside */}
+                <div className="absolute bottom-6 right-6 z-10">
+                  <ScrollButton />
+                </div>
+              </ChatContainerRoot>
+            </div>
+            {(chatId === "new" ||
+              (messages.length == 0 && !isLoadingHistory)) && (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="max-w-2xl w-full text-center space-y-2 px-6">
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <h2 className="text-3xl font-semibold tracking-tight tracking-wider">
+                      <MorphingText
+                        className="text-foreground p-5"
+                        texts={["ClubSync", "Assistant"]}
+                      />
+                    </h2>
+                    <p className="text-muted-foreground text-sm">
+                      Understand • Query • Analyze
+                    </p>
+                  </div>
+
+                  {/* Suggestions */}
+                  <div className="flex flex-wrap justify-center gap-3 pt-4">
+                    <PromptSuggestion
+                      className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20"
+                      onClick={() =>
+                        setInput(
+                          "Provide a clear explanation of the database schema, including all tables and their relationships.",
+                        )
+                      }
+                    >
+                      Understand Schema
+                    </PromptSuggestion>
+
+                    <PromptSuggestion
+                      className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20"
+                      onClick={() =>
+                        setInput(
+                          "Show all inventory items that are currently borrowed, including who borrowed them and the borrow dates.",
+                        )
+                      }
+                    >
+                      Track Inventory
+                    </PromptSuggestion>
+
+                    <PromptSuggestion
+                      className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                      onClick={() =>
+                        setInput(
+                          "Display complete details of all clubs along with the faculty members responsible for them.",
+                        )
+                      }
+                    >
+                      View Club Info
+                    </PromptSuggestion>
+
+                    <PromptSuggestion
+                      className="bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20"
+                      onClick={() =>
+                        setInput(
+                          "Provide a detailed breakdown of all income records associated with the Astra Robotics club.",
+                        )
+                      }
+                    >
+                      Analyze Income
+                    </PromptSuggestion>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PROMPT — fixed */}
+            <div className="shrink-0 p-4">
+              <PromptInput
+                value={input}
+                onValueChange={setInput}
+                isLoading={status === "streaming" || status === "submitted"}
+                onSubmit={() => send()}
+                className="max-w-6xl mx-auto w-full"
+              >
+                <div className="flex w-full flex-col gap-4">
+                  <div className="flex w-full">
+                    <PromptInputTextarea
+                      placeholder="Ask me anything..."
+                      className="rounded-xl"
+                    />
+                    <PromptInputActions className="justify-end pt-2">
+                      <PromptInputAction
+                        tooltip={
+                          status === "streaming" || status === "submitted"
+                            ? "Stop generation"
+                            : "Send message"
+                        }
+                      >
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-8 w-8 rounded-full"
+                          onClick={() => {
+                            if (
+                              status === "streaming" ||
+                              status === "submitted"
+                            ) {
+                              stop();
+                            } else {
+                              send();
+                            }
+                          }}
+                        >
+                          {status === "streaming" || status === "submitted" ? (
+                            <Square className="size-5 fill-current" />
+                          ) : (
+                            <ArrowUp className="size-5" />
+                          )}
+                        </Button>
+                      </PromptInputAction>
+                    </PromptInputActions>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <ModelCombobox
+                      value={selectedModel}
+                      onChange={setSelectedModel}
+                    />
+                    <ModeToggle value={mode} onChange={setMode} />
+                  </div>
+                </div>
+              </PromptInput>
+            </div>
           </div>
-          </PromptInput>
-        </div>
-  
-      </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
