@@ -116,6 +116,31 @@ function MarkdownComponent({ content }: { content: string }) {
               {children}
             </h3>
           ),
+          a: ({ href, children }) => {
+            const isExternal = href?.startsWith("http");
+
+            return (
+              <a
+                href={href}
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
+                className="
+                  text-blue-600 
+                  dark:text-blue-400
+                  font-medium
+                  underline-offset-4
+                  hover:underline
+                  hover:text-blue-700
+                  dark:hover:text-blue-300
+                  transition-colors
+                  break-all
+                "
+              >
+                {children}
+              </a>
+            );
+          },
+
           p: ({ children }) => (
             <p className="leading-relaxed my-3">{children}</p>
           ),

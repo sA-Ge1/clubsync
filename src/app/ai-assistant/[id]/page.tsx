@@ -79,6 +79,7 @@ import { ScrollButton } from "@/components/ui/scroll-button";
 import { SystemMessage } from "@/components/ui/system-message";
 import { marked } from "marked";
 import removeMarkdown from "remove-markdown";
+import { supabase } from "@/lib/supabaseClient";
 export const ChatMessage = memo(function ChatMessage({
   message,
   status,
@@ -88,6 +89,7 @@ export const ChatMessage = memo(function ChatMessage({
   isLastAssistant,
   speakingId,
   onReadAloud,
+  onReconnectGmail,
 }: any) {
   const isAssistant = message.role === "assistant";
 
@@ -158,10 +160,18 @@ export const ChatMessage = memo(function ChatMessage({
             );
           }
 
-          if (typeof part.type === "string" && part.type.startsWith("tool-")) {
+          if (part.type === "tool-read_gmail") {
             return (
               <div key={i} className="space-y-3">
                 <Tool toolPart={part} />
+              </div>
+            );
+          }
+
+          if (typeof part.type === "string" && part.type.startsWith("tool-")) {
+            return (
+              <div key={i} className="space-y-3">
+                <Tool toolPart={part}/>
               </div>
             );
           }
@@ -223,8 +233,31 @@ export const ChatMessage = memo(function ChatMessage({
           </MessageAction>
         )}
       </MessageActions>
+      {message.parts.map((part: any, i: number) => {
+        if (part.type === "tool-read_gmail") {
+            const reconnectRequired =
+              part.state === "output-available" &&
+              Boolean(part.output?.reconnectRequired);
+
+            return (
+              <div key={i} className="space-y-3 mt-5">
+                {reconnectRequired && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onReconnectGmail}
+                    className="rounded-lg"
+                  >
+                    Reconnect Gmail
+                  </Button>
+                )}
+              </div>
+            );
+          }
+      })}
     </Message>
   );
+  
 });
 
 function getMessageText(message: any): string {
@@ -363,11 +396,20 @@ function removeToolResults(messages: UIMessage[]) {
   return messages.map((msg) => ({
     ...msg,
     parts: (Array.isArray(msg.parts) ? msg.parts : []).filter(
-      (part: any) =>
-        !(typeof part.type === "string" && part.type.startsWith("tool-")),
+      (part: any) => {
+        if (typeof part.type !== "string") return true;
+
+        const isTool = part.type.startsWith("tool-");
+        const isAllowed =
+          part.type === "tool-read_gmail" ||
+          part.type === "tool-web_search";
+
+        return !(isTool && !isAllowed);
+      }
     ),
   }));
 }
+
 
 async function loadChatFromDB(chatId: string) {
   const res = await fetch(`/api/chats/${chatId}/messages`, {
@@ -752,6 +794,28 @@ useEffect(() => {
     router.push(`/ai-assistant/${id}`);
   }
 
+  async function handleReconnectGmail() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?source=login`,
+        scopes: [
+          "https://www.googleapis.com/auth/gmail.readonly",
+          "https://www.googleapis.com/auth/gmail.send",
+          "https://www.googleapis.com/auth/gmail.modify",
+        ].join(" "),
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
+
+    if (error) {
+      console.error("Failed to reconnect Gmail:", error.message);
+    }
+  }
+  
   if (!user || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -782,7 +846,7 @@ useEffect(() => {
               />
               <h1
                 className="text-sm font-medium tracking-wide text-muted-foreground"
-                onClick={() => console.log(removeToolResults(messages))}
+                onClick={()=>console.log(removeToolResults(messages))}
               >
                 ClubSync Assistant
               </h1>
@@ -937,6 +1001,7 @@ useEffect(() => {
                         isLastAssistant={m.id === lastAssistantId}
                         speakingId={speakingId}
                         onReadAloud={handleReadAloud}
+                        onReconnectGmail={handleReconnectGmail}
                       />
                     ))
                   )}

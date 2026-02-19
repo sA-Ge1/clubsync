@@ -9,7 +9,7 @@ import { reportTool } from "@/lib/tools/reportTool";
 import { tavilyTool } from "@/lib/tools/tavilyTool";
 import { schemaInfoTool } from "@/lib/tools/schemaInfoTool";
 import { errorDecoder } from "@/lib/ai/decodeError";
-
+import { gmailReadTool } from "@/lib/tools/gmailReadTool";
 export async function POST(req: Request) {
   try{
     const userId = req.headers.get("x-user-id");
@@ -34,8 +34,9 @@ export async function POST(req: Request) {
       tools: { 
         sql: sqlTool,
         report: reportTool,
-        tavily: tavilyTool,
+        web_search: tavilyTool,
         schema_info: schemaInfoTool,
+        read_gmail: gmailReadTool,
       },
       toolChoice: "auto",
       // Stop after 6 steps OR immediately after successful report generation

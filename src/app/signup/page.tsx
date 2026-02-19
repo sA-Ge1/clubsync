@@ -304,7 +304,16 @@ export default function SignUpPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?source=signup`
+          redirectTo: `${window.location.origin}/auth/callback?source=signup`,
+          scopes: [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/gmail.modify"
+          ].join(" "),
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent"
+          }
         }
       });
 

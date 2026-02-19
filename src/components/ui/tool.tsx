@@ -14,7 +14,7 @@ import {
   Settings,
   XCircle,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 export type ToolPart = {
   type: string
@@ -116,15 +116,38 @@ const Tool = ({ toolPart, defaultOpen = false, className }: ToolProps) => {
     }
   }
 
+  const truncate = (value: string, maxChars = 8000) => {
+    if (value.length <= maxChars) return value
+    return `${value.slice(0, maxChars)}\n\n...truncated ${value.length - maxChars} characters`
+  }
+
   const formatValue = (value: unknown): string => {
     if (value === null) return "null"
     if (value === undefined) return "undefined"
-    if (typeof value === "string") return value
+    if (typeof value === "string") return truncate(value, 4000)
     if (typeof value === "object") {
-      return JSON.stringify(value, null, 2)
+      return truncate(JSON.stringify(value, null, 2), 8000)
     }
     return String(value)
   }
+
+  const formattedInput = useMemo(() => {
+    if (!isOpen || !input || Object.keys(input).length === 0) {
+      return [] as Array<{ key: string; value: string }>
+    }
+
+    return Object.entries(input).map(([key, value]) => ({
+      key,
+      value: formatValue(value),
+    }))
+  }, [isOpen, input])
+
+  const formattedOutput = useMemo(() => {
+    if (!isOpen || !output) {
+      return ""
+    }
+    return formatValue(output)
+  }, [isOpen, output])
 
   return (
     <div
@@ -162,10 +185,10 @@ const Tool = ({ toolPart, defaultOpen = false, className }: ToolProps) => {
                   Input
                 </h4>
                 <div className="bg-background rounded border p-2 font-mono text-sm">
-                  {Object.entries(input).map(([key, value]) => (
+                  {formattedInput.map(({ key, value }) => (
                     <div key={key} className="mb-1">
                       <span className="text-muted-foreground">{key}:</span>{" "}
-                      <span>{formatValue(value)}</span>
+                      <span>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -179,7 +202,7 @@ const Tool = ({ toolPart, defaultOpen = false, className }: ToolProps) => {
                 </h4>
                 <div className="bg-background max-h-60 overflow-auto rounded border p-2 font-mono text-sm">
                   <pre className="whitespace-pre-wrap">
-                    {formatValue(output)}
+                    {formattedOutput}
                   </pre>
                 </div>
               </div>
