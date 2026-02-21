@@ -142,7 +142,7 @@ function MarkdownComponent({ content }: { content: string }) {
           },
 
           p: ({ children }) => (
-            <p className="leading-relaxed my-3">{children}</p>
+            <p className="leading-relaxed  my-3">{children}</p>
           ),
           ul: ({ children }) => (
             <ul className="list-disc ml-6 space-y-1">{children}</ul>

@@ -43,7 +43,7 @@ export const ChainOfThoughtTrigger = ({
     {...props}
   >
     <div className="flex items-center gap-2">
-      {leftIcon ? (
+      {/* {leftIcon ? (
         <span className="relative inline-flex size-4 items-center justify-center">
           <span
             className={cn(
@@ -59,9 +59,9 @@ export const ChainOfThoughtTrigger = ({
         </span>
       ) : (
         <span className="relative inline-flex size-4 items-center justify-center">
-          <Circle className="size-2 fill-current" />
+          
         </span>
-      )}
+      )} */}
       <span>{children}</span>
     </div>
     {!leftIcon && (

@@ -10,6 +10,7 @@ import { tavilyTool } from "@/lib/tools/tavilyTool";
 import { schemaInfoTool } from "@/lib/tools/schemaInfoTool";
 import { errorDecoder } from "@/lib/ai/decodeError";
 import { gmailReadTool } from "@/lib/tools/gmailReadTool";
+import { gmailSendTool } from "@/lib/tools/gmailSendTool";
 export async function POST(req: Request) {
   try{
     const userId = req.headers.get("x-user-id");
@@ -37,12 +38,12 @@ export async function POST(req: Request) {
         web_search: tavilyTool,
         schema_info: schemaInfoTool,
         read_gmail: gmailReadTool,
+        send_gmail: gmailSendTool,
       },
       toolChoice: "auto",
-      // Stop after 6 steps OR immediately after successful report generation
+      temperature: 0.2,
+      // Stop after 10 steps OR immediately after successful report generation OR after detailed email fetch
       stopWhen: (context) => {
-        // Stop only if report tool succeeded (pdf_data is too large for model context)
-        // If report failed (e.g., club not found), let the AI continue to respond
         for (const step of context.steps) {
           if (step.toolResults) {
             for (const toolResult of step.toolResults) {
@@ -53,11 +54,20 @@ export async function POST(req: Request) {
                 console.log("🛑 Stopping: successful report generated");
                 return true;
               }
+              // Stop after detailed email fetch (UI will render it)
+              if (toolResult.toolName === 'read_gmail' && output?.mode === 'detail' && output?.email) {
+                console.log("🛑 Stopping: detailed email fetched, UI will render");
+                return true;
+              }
+              if (toolResult.toolName === 'send_gmail' && output?.mode === 'confirmation_required' && output?.draft) {
+                console.log("🛑 Stopping: detailed email sent, UI will render");
+                return true;
+              }
             }
           }
         }
-        // Also stop after 6 steps max
-        return context.steps.length >= 6;
+        // Also stop after 10 steps max
+        return context.steps.length >= 10;
       },
       onStepFinish(step) {
         // Step contains what just happened

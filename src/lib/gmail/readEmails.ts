@@ -47,7 +47,8 @@ export type GmailEmailSummary = {
 export type GmailEmailDetails = GmailEmailSummary & {
   to: string;
   cc: string;
-  body: string;
+  bodyRaw: string;
+  contentType: 'text/html' | 'text/plain';
   labels: string[];
 };
 
@@ -116,13 +117,14 @@ function htmlToText(html: string): string {
   return normalizeBodyText(text);
 }
 
-function extractBody(payload: GmailMessagePart | undefined): string {
+function extractBody(payload: GmailMessagePart | undefined): { raw: string; type: 'text/html' | 'text/plain' } {
   if (!payload) {
-    return "";
+    return { raw: "", type: "text/plain" };
   }
 
   const queue: GmailMessagePart[] = [payload];
   let htmlCandidate = "";
+  let plainCandidate = "";
 
   while (queue.length) {
     const part = queue.shift();
@@ -134,8 +136,8 @@ function extractBody(payload: GmailMessagePart | undefined): string {
     if (data) {
       const decoded = decodeBase64Url(data);
 
-      if (part.mimeType === "text/plain") {
-        return normalizeBodyText(decoded);
+      if (part.mimeType === "text/plain" && !plainCandidate) {
+        plainCandidate = decoded;
       }
 
       if (part.mimeType === "text/html" && !htmlCandidate) {
@@ -148,7 +150,16 @@ function extractBody(payload: GmailMessagePart | undefined): string {
     }
   }
 
-  return htmlCandidate ? htmlToText(htmlCandidate) : "";
+  // Prefer HTML over plain text
+  if (htmlCandidate) {
+    return { raw: htmlCandidate, type: "text/html" };
+  }
+
+  if (plainCandidate) {
+    return { raw: plainCandidate, type: "text/plain" };
+  }
+
+  return { raw: "", type: "text/plain" };
 }
 
 function mapSummary(msg: GmailMessageResponse): GmailEmailSummary {
@@ -334,12 +345,14 @@ export async function readEmailById(options: {
 
   const summary = mapSummary(msg);
   const headers = msg.payload?.headers;
+  const bodyExtracted = extractBody(msg.payload);
 
   return {
     ...summary,
     to: getHeaderValue(headers, "To"),
     cc: getHeaderValue(headers, "Cc"),
-    body: extractBody(msg.payload),
+    bodyRaw: bodyExtracted.raw,
+    contentType: bodyExtracted.type,
     labels: msg.labelIds ?? [],
   };
 }

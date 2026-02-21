@@ -1,5 +1,5 @@
 "use client";
-import { memo, useMemo, useRef } from "react";
+import { memo, useMemo, useRef, useState, useEffect } from "react";
 import type { UIMessage } from "ai";
 import { AppSidebar } from "../components/app-sidebar";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ import { useParams } from "next/navigation";
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useEffect, useState } from "react";
 import {
   PromptInput,
   PromptInputAction,
@@ -37,6 +36,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tool } from "@/components/ui/tool";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   ChatContainerContent,
   ChatContainerRoot,
@@ -50,19 +52,26 @@ import {
 } from "@/components/ui/message";
 import {
   ArrowUp,
+  Bug,
   ChartNoAxesColumn,
   CheckCheck,
   Copy,
+  Database,
   Download,
   Eye,
   FileText,
+  Globe,
   Home,
   Loader2,
+  Mail,
+  Network,
   RefreshCcw,
   RefreshCw,
+  SendHorizontal,
   Square,
   Volume2,
   VolumeOff,
+  Wrench,
 } from "lucide-react";
 import { useUserInfo } from "@/hooks/useUserInfo";
 import { cn } from "@/lib/utils";
@@ -80,6 +89,439 @@ import { SystemMessage } from "@/components/ui/system-message";
 import { marked } from "marked";
 import removeMarkdown from "remove-markdown";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtItem,
+  ChainOfThoughtStep,
+  ChainOfThoughtTrigger,
+} from "@/components/ui/chain-of-thought";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+type EmailSendState = {
+  status: "sending" | "sent" | "error" | "cancelled";
+  message?: string;
+};
+
+type EmailSendPayload = {
+  to: string;
+  subject: string;
+  body: string;
+  threadId?: string;
+  inReplyTo?: string;
+  references?: string;
+  isHtml?: boolean;
+};
+
+type EmailDraft = {
+  to?: string;
+  subject?: string;
+  body?: string;
+  threadId?: string;
+  inReplyTo?: string;
+  references?: string;
+  isHtml?: boolean;
+};
+
+function EmailSendConfirmationCard({
+  toolPart,
+  sendState,
+  onConfirm,
+  onCancel,
+  isLatestMessage = true,
+}: {
+  toolPart: any;
+  sendState?: EmailSendState;
+  onConfirm: (toolCallId: string, payload: EmailSendPayload) => void;
+  onCancel: (toolCallId: string) => void;
+  isLatestMessage?: boolean;
+}) {
+  const output = toolPart?.output as
+    | {
+        mode?: string;
+        action?: "new" | "reply";
+        draft?: EmailDraft;
+      }
+    | undefined;
+
+  const toolCallId = toolPart?.toolCallId as string | undefined;
+  const draft = output?.draft;
+
+  const [to, setTo] = useState(draft?.to ?? "");
+  const [subject, setSubject] = useState(draft?.subject ?? "");
+  const [body, setBody] = useState(draft?.body ?? "");
+  const [isHtml, setIsHtml] = useState(draft?.isHtml ?? false);
+
+  useEffect(() => {
+    setTo(draft?.to ?? "");
+    setSubject(draft?.subject ?? "");
+    setBody(draft?.body ?? "");
+    setIsHtml(draft?.isHtml ?? false);
+  }, [toolCallId, draft?.to, draft?.subject, draft?.body, draft?.isHtml]);
+
+  if (
+    toolPart?.state !== "output-available" ||
+    output?.mode !== "confirmation_required" ||
+    !draft ||
+    !toolCallId
+  ) {
+    return null;
+  }
+
+  const isSending = sendState?.status === "sending";
+  const isSent = sendState?.status === "sent";
+  const isCancelled = sendState?.status === "cancelled";
+  const isLocked = isSent || isCancelled || !isLatestMessage;
+  const canConfirm =
+    Boolean(to.trim()) &&
+    Boolean(subject.trim()) &&
+    Boolean(body.trim()) &&
+    !isSending &&
+    !isLocked;
+
+  return (
+    <div className="rounded-xl my-10 border-b bg-card p-4 space-y-3">
+      <div>
+        <h4 className="text-md font-semibold mb-1">Confirm Email</h4>
+        <p className="text-sm text-muted-foreground">
+          {output.action === "reply" ? "Reply draft" : "New email draft"} ready. Review and edit before sending.
+        </p>
+      </div>
+
+      <div className="space-y-1 flex items-center justify-start gap-2">
+        <Label htmlFor={`email-to-${toolCallId}`}>To:</Label>
+        <Input
+          id={`email-to-${toolCallId}`}
+          value={to}
+          className="w-auto text-blue-500"
+          disabled={isLocked || isSending}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="recipient@example.com"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`email-subject-${toolCallId}`}>Subject:</Label>
+        <Input
+          id={`email-subject-${toolCallId}`}
+          value={subject}
+          className="w-auto"
+          disabled={isLocked || isSending}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder="Email subject"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`email-body-${toolCallId}`}>Message:</Label>
+        <Textarea
+          id={`email-body-${toolCallId}`}
+          value={body}
+          disabled={isLocked || isSending}
+          onChange={(e) => setBody(e.target.value)}
+          className="min-h-28"
+          placeholder="Write your email body"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id={`email-html-${toolCallId}`}
+          checked={isHtml}
+          disabled={isLocked || isSending}
+          onChange={(e) => setIsHtml(e.target.checked)}
+          className="rounded"
+        />
+        <Label htmlFor={`email-html-${toolCallId}`} className="text-xs cursor-pointer">
+          Format as HTML
+        </Label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          onClick={() =>
+            onConfirm(toolCallId, {
+              to: to.trim(),
+              subject: subject.trim(),
+              body: body.trim(),
+              threadId: draft.threadId,
+              inReplyTo: draft.inReplyTo,
+              references: draft.references,
+              isHtml,
+            })
+          }
+          disabled={!canConfirm}
+        >
+          {isSending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...
+            </>
+          ) : isSent ? (
+            "Sent"
+          ) : !isLatestMessage ? (
+            "Expired"
+          ) : (
+            "Confirm & Send"
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onCancel(toolCallId)}
+          disabled={isSending || isSent || isCancelled || !isLatestMessage}
+        >
+          {isCancelled ? "Cancelled" : !isLatestMessage ? "Expired" : "Cancel"}
+        </Button>
+      </div>
+
+      {sendState?.message && (
+        <p
+          className={cn(
+            "text-xs",
+            sendState.status === "error" ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {sendState.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EmailDetailView({ email }: { email: any }) {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+useEffect(() => {
+  const getTheme = () =>
+    document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light";
+
+  // Set initial theme
+  setTheme(getTheme());
+
+  // Watch for class changes on <html>
+  const observer = new MutationObserver(() => {
+    setTheme(getTheme());
+  });
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
+  return () => observer.disconnect();
+}, []);
+
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(200);
+
+  const handleIframeLoad = () => {
+    if (iframeRef.current?.contentDocument) {
+      setTimeout(() => {
+        const doc = iframeRef.current?.contentDocument;
+        if (doc) {
+          const height = doc.documentElement.scrollHeight || doc.body.scrollHeight;
+          setIframeHeight(Math.max(height, 200));
+        }
+      }, 100);
+    }
+  };
+
+  useEffect(() => {
+    if (iframeRef.current?.contentDocument) {
+      handleIframeLoad();
+      
+      // Add ResizeObserver for dynamic height adjustments
+      const resizeObserver = new ResizeObserver(() => {
+        const doc = iframeRef.current?.contentDocument;
+        if (doc) {
+          const height = doc.documentElement.scrollHeight || doc.body.scrollHeight;
+          setIframeHeight(height);
+        }
+      });
+      
+      resizeObserver.observe(iframeRef.current.contentDocument.body);
+      
+      return () => resizeObserver.disconnect();
+    }
+  }, [email.id]);
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const normalizeBodyText = (input: string): string => {
+    return input
+      .replace(/\\r\\n|\\n|\r\n|\r/g, "\n")
+      .replace(/=(\r\n|\n)/g, "")
+      .replace(/&nbsp;|&#160;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;|&#x27;/gi, "'")
+      .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+      .replace(/&#x([\da-fA-F]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/=([A-Fa-f0-9]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
+
+  const getDisplayBody = () => {
+    if (!email.bodyRaw) return null;
+
+    if (email.contentType === 'text/html') {
+      return email.bodyRaw;
+    }
+
+    return null;
+  };
+const buildIframeDoc = (rawHtml: string,theme: string) => {
+  const isDark = theme === "dark";
+
+  const background = isDark ? "#000000" : "#ffffff";
+  const textColor = isDark ? "#e5e7eb" : "#111827";
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: ${background} !important;
+            color: ${textColor};
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+
+          /* Prevent invisible text */
+          body * {
+            max-width: 100%;
+          }
+
+          /* Fix common email issues */
+          img {
+            max-width: 100%;
+            height: auto;
+          }
+
+          table {
+            max-width: 100%;
+          }
+        </style>
+      </head>
+      <body>
+        ${rawHtml}
+      </body>
+    </html>
+  `;
+};
+const renderBody = () => {
+  const htmlBody = getDisplayBody();
+  
+
+  if (htmlBody) {
+    return (
+      <iframe
+        key={theme} // 👈 forces reload
+        ref={iframeRef}
+        srcDoc={buildIframeDoc(htmlBody, theme || "light")}
+        onLoad={handleIframeLoad}
+        sandbox="allow-same-origin"
+        className="w-full border-0"
+        style={{ height: iframeHeight, minHeight: 200 }}
+      />
+    );
+  }
+
+  return (
+    <div className="whitespace-pre-wrap text-foreground">
+      {email.bodyRaw
+        ? normalizeBodyText(email.bodyRaw)
+        : "(Empty message)"}
+    </div>
+  );
+};
+
+
+
+return (
+  <div className="min-h-screen w-full bg-background px-3 sm:px-6 py-6 sm:py-10 flex justify-start">
+    <div className="w-full max-w-3xl rounded-2xl border bg-card shadow-sm overflow-hidden">
+
+      {/* Header */}
+      <div className="p-4 sm:p-6 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+
+          {/* Left Section */}
+          <div className="flex gap-3 sm:gap-4 min-w-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
+              {email.from?.[0]?.toUpperCase()}
+            </div>
+
+            <div className="space-y-1 min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold leading-tight break-words">
+                {email.subject || "No subject"}
+              </h2>
+
+              <div className="text-xs sm:text-sm text-muted-foreground break-words">
+                <span className="font-medium text-foreground">
+                  {email.from}
+                </span>
+                {email.to && <> → {email.to}</>}
+              </div>
+
+              {email.cc && (
+                <div className="text-xs text-muted-foreground break-words">
+                  CC: {email.cc}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Date */}
+          <div className="text-xs text-muted-foreground whitespace-nowrap sm:text-right">
+            {formatDate(email.date)}
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-4 sm:px-6 py-5 sm:py-2">
+        {renderBody()}
+      </div>
+
+    </div>
+  </div>
+);
+
+
+}
+
 export const ChatMessage = memo(function ChatMessage({
   message,
   status,
@@ -90,8 +532,18 @@ export const ChatMessage = memo(function ChatMessage({
   speakingId,
   onReadAloud,
   onReconnectGmail,
+  emailSendStates,
+  onConfirmEmailSend,
+  onCancelEmailSend,
+  devMode
 }: any) {
   const isAssistant = message.role === "assistant";
+  const toolParts = (Array.isArray(message?.parts) ? message.parts : []).filter(
+    (part: any) => typeof part?.type === "string" && part.type.startsWith("tool-")
+  );
+  const firstToolPartIndex = (Array.isArray(message?.parts) ? message.parts : []).findIndex(
+    (part: any) => typeof part?.type === "string" && part.type.startsWith("tool-")
+  );
 
   async function handleCopyMessage() {
     const plainText = getMessageText(message);
@@ -142,6 +594,14 @@ export const ChatMessage = memo(function ChatMessage({
           }
 
           if (part.type === "tool-sql") {
+            if (!devMode) {
+              if (i !== firstToolPartIndex) return null;
+              return (
+                <div key={i} className="space-y-3">
+                  <ToolExecutionSummary toolParts={toolParts} />
+                </div>
+              );
+            }
             return (
               <div key={i} className="space-y-3">
                 <Tool toolPart={part} />
@@ -150,6 +610,29 @@ export const ChatMessage = memo(function ChatMessage({
           }
 
           if (part.type === "tool-report") {
+            if (!devMode) {
+              const hasReport = part.state === "output-available" && part.output?.success;
+              
+              if (i === firstToolPartIndex) {
+                return (
+                  <div key={i} className="space-y-3">
+                    <ToolExecutionSummary toolParts={toolParts} />
+                    {hasReport && <ReportDownload output={part.output} />}
+                  </div>
+                );
+              }
+              
+              // Render only the report download if this is a later tool with a report
+              if (hasReport) {
+                return (
+                  <div key={i} className="space-y-3">
+                    <ReportDownload output={part.output} />
+                  </div>
+                );
+              }
+              
+              return null;
+            }
             return (
               <div key={i} className="space-y-3">
                 <Tool toolPart={part} />
@@ -161,6 +644,46 @@ export const ChatMessage = memo(function ChatMessage({
           }
 
           if (part.type === "tool-read_gmail") {
+            const output = part?.output as any;
+            const isDetailView = output?.mode === "detail" && output?.email;
+
+            if (!devMode) {
+              if (i === firstToolPartIndex) {
+                return (
+                  <div key={i} className="space-y-3">
+                    <ToolExecutionSummary toolParts={toolParts} />
+                    {isDetailView && (
+                      <EmailDetailView 
+                        email={output.email}
+                      />
+                    )}
+                  </div>
+                );
+              }
+              
+              // Render only the email detail if this is a later tool with detail view
+              if (isDetailView) {
+                return (
+                  <div key={i} className="space-y-3">
+                    <EmailDetailView 
+                      email={output.email}
+                    />
+                  </div>
+                );
+              }
+              
+              return null;
+            }
+            
+            if (isDetailView) {
+              return (
+                <EmailDetailView 
+                  key={i}
+                  email={output.email}
+                />
+              );
+            }
+            
             return (
               <div key={i} className="space-y-3">
                 <Tool toolPart={part} />
@@ -168,10 +691,77 @@ export const ChatMessage = memo(function ChatMessage({
             );
           }
 
-          if (typeof part.type === "string" && part.type.startsWith("tool-")) {
+          if (part.type === "tool-send_gmail") {
+            const output = part?.output as any;
+            const needsConfirmation = 
+              part.state === "output-available" && 
+              output?.mode === "confirmation_required" &&
+              output?.draft &&
+              part.toolCallId;
+
+            if (!devMode) {
+              if (i === firstToolPartIndex) {
+                return (
+                  <div key={i} className="space-y-3">
+                    <ToolExecutionSummary toolParts={toolParts} />
+                    {needsConfirmation && (
+                      <EmailSendConfirmationCard
+                        toolPart={part}
+                        sendState={part.toolCallId ? emailSendStates?.[part.toolCallId] : undefined}
+                        onConfirm={onConfirmEmailSend}
+                        onCancel={onCancelEmailSend}
+                        isLatestMessage={isLastAssistant}
+                      />
+                    )}
+                  </div>
+                );
+              }
+              
+              // Render only the email confirmation card if this is a later tool that needs confirmation
+              if (needsConfirmation) {
+                return (
+                  <div key={i} className="space-y-3">
+                    <EmailSendConfirmationCard
+                      toolPart={part}
+                      sendState={part.toolCallId ? emailSendStates?.[part.toolCallId] : undefined}
+                      onConfirm={onConfirmEmailSend}
+                      onCancel={onCancelEmailSend}
+                      isLatestMessage={isLastAssistant}
+                    />
+                  </div>
+                );
+              }
+              
+              return null;
+            }
             return (
               <div key={i} className="space-y-3">
-                <Tool toolPart={part}/>
+                <Tool toolPart={part} />
+                {needsConfirmation && (
+                  <EmailSendConfirmationCard
+                    toolPart={part}
+                    sendState={part.toolCallId ? emailSendStates?.[part.toolCallId] : undefined}
+                    onConfirm={onConfirmEmailSend}
+                    onCancel={onCancelEmailSend}
+                    isLatestMessage={isLastAssistant}
+                  />
+                )}
+              </div>
+            );
+          }
+
+          if (typeof part.type === "string" && part.type.startsWith("tool-")) {
+            if (!devMode) {
+              if (i !== firstToolPartIndex) return null;
+              return (
+                <div key={i} className="space-y-3">
+                  <ToolExecutionSummary toolParts={toolParts} />
+                </div>
+              );
+            }
+            return (
+              <div key={i} className="space-y-3">
+                <Tool toolPart={part} />
               </div>
             );
           }
@@ -179,7 +769,7 @@ export const ChatMessage = memo(function ChatMessage({
           return null;
         })}
       </div>
-
+      
       <MessageActions
         className={cn(
           "opacity-0",
@@ -234,7 +824,7 @@ export const ChatMessage = memo(function ChatMessage({
         )}
       </MessageActions>
       {message.parts.map((part: any, i: number) => {
-        if (part.type === "tool-read_gmail") {
+        if (part.type === "tool-read_gmail" || part.type === "tool-send_gmail") {
             const reconnectRequired =
               part.state === "output-available" &&
               Boolean(part.output?.reconnectRequired);
@@ -259,6 +849,173 @@ export const ChatMessage = memo(function ChatMessage({
   );
   
 });
+
+function getToolSummary(toolType: string) {
+  const normalizedType = toolType.replace(/^tool-/, "");
+
+  const summaryMap: Record<string, { title: string; description: string }> = {
+    web_search: {
+      title: "Performing web search",
+      description: "Retrieving information from online websites.",
+    },
+    read_gmail: {
+      title: "Reading Gmail",
+      description: "Fetching and organizing email messages.",
+    },
+    send_gmail: {
+      title: "Preparing Gmail send",
+      description: "Drafting or sending an email through Gmail.",
+    },
+    sql: {
+      title: "Running database query",
+      description: "Accessing structured records from the database.",
+    },
+    report: {
+      title: "Generating report",
+      description: "Compiling results into a report output.",
+    },
+    schema_info: {
+      title: "Inspecting schema",
+      description: "Reviewing table and relationship metadata.",
+    },
+  };
+
+  const fallback = normalizedType.replace(/_/g, " ");
+
+  return (
+    summaryMap[normalizedType] ?? {
+      title: `Calling ${fallback}`,
+      description: "Executing tool action and processing results.",
+    }
+  );
+}
+
+function getToolVisual(toolType: string) {
+  const normalizedType = toolType.replace(/^tool-/, "");
+
+  const visualMap: Record<
+    string,
+    {
+      Icon: any;
+      iconClassName: string;
+      containerClassName: string;
+    }
+  > = {
+    web_search: {
+      Icon: Globe,
+      iconClassName: "text-blue-500",
+      containerClassName: "bg-blue-500/15",
+    },
+    read_gmail: {
+      Icon: Mail,
+      iconClassName: "text-violet-500",
+      containerClassName: "bg-violet-500/15",
+    },
+    send_gmail: {
+      Icon: SendHorizontal,
+      iconClassName: "text-emerald-500",
+      containerClassName: "bg-emerald-500/15",
+    },
+    sql: {
+      Icon: Database,
+      iconClassName: "text-amber-500",
+      containerClassName: "bg-amber-500/15",
+    },
+    report: {
+      Icon: FileText,
+      iconClassName: "text-rose-500",
+      containerClassName: "bg-rose-500/15",
+    },
+    schema_info: {
+      Icon: Network,
+      iconClassName: "text-cyan-500",
+      containerClassName: "bg-cyan-500/15",
+    },
+  };
+
+  return (
+    visualMap[normalizedType] ?? {
+      Icon: Wrench,
+      iconClassName: "text-muted-foreground",
+      containerClassName: "bg-muted",
+    }
+  );
+}
+
+function ToolExecutionSummary({ toolParts }: { toolParts: any[] }) {
+  const parts = Array.isArray(toolParts) ? toolParts : [];
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  const stateLabelMap: Record<string, string> = {
+    "input-streaming": "Running",
+    "input-available": "Running",
+    "output-available": "Completed",
+    "output-error": "Failed",
+  };
+
+  return (
+    <div className="rounded-xl bg-card space-y-2 p-2">
+      <ChainOfThought>
+        <ChainOfThoughtStep defaultOpen={true}>
+          <ChainOfThoughtTrigger className="text-md ">
+            Execution Trace
+          </ChainOfThoughtTrigger>
+          <ChainOfThoughtContent>
+            {parts.map((toolPart, index) => {
+              const toolType =
+                typeof toolPart?.type === "string" ? toolPart.type : "tool-unknown";
+              const state = toolPart?.state ?? "pending";
+              const { title, description } = getToolSummary(toolType);
+              const { Icon, iconClassName, containerClassName } = getToolVisual(toolType);
+              const stateLabel = stateLabelMap[state] ?? "Pending";
+              const isRunning = stateLabel === "Running";
+              const isFailed = stateLabel === "Failed";
+              const isLast = index === parts.length - 1;
+              const showConnector = parts.length === 1 ? true : !isLast;
+
+              return (
+                <div key={`${toolPart?.toolCallId ?? toolType}-${index}`} className="grid grid-cols-[min-content_minmax(0,1fr)] gap-x-3">
+                  <div className="flex flex-col items-center">
+                    <span
+                      className={cn(
+                        "relative inline-flex size-5 items-center justify-center rounded-md",
+                        isFailed ? "bg-red-500/15" : "bg-background"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "size-3.5",
+                          isFailed ? "text-red-500" : iconClassName,
+                          isRunning && "animate-pulse"
+                        )}
+                      />
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-1 w-px bg-primary/20 min-h-4",
+                        showConnector ? "flex-1" : "opacity-0"
+                      )}
+                    />
+                  </div>
+                  <div className="rounded-lg space-y-1 mb-2">
+                    <div className="min-h-5 flex items-center text-sm leading-5 font-medium text-foreground">
+                      {title}{isRunning&&<Loader2 className="ml-2 size-4 animate-spin text-muted-foreground" />}
+                    </div>
+                    <ChainOfThoughtItem className="pl-7">{description}</ChainOfThoughtItem>
+                    <ChainOfThoughtItem className="pl-7">Status: {stateLabel}</ChainOfThoughtItem>
+                  </div>
+                </div>
+              );
+            })}
+          </ChainOfThoughtContent>
+        </ChainOfThoughtStep>
+      </ChainOfThought>
+    </div>
+  );
+}
 
 function getMessageText(message: any): string {
   if (!message?.parts) return "";
@@ -402,7 +1159,8 @@ function removeToolResults(messages: UIMessage[]) {
         const isTool = part.type.startsWith("tool-");
         const isAllowed =
           part.type === "tool-read_gmail" ||
-          part.type === "tool-web_search";
+          part.type === "tool-web_search"||
+          part.type === "tool-schema_info";
 
         return !(isTool && !isAllowed);
       }
@@ -471,6 +1229,8 @@ export default function Page() {
   const [usageDialogOpen, setUsageDialogOpen] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [emailSendStates, setEmailSendStates] = useState<Record<string, EmailSendState>>({});
+  const [devMode, setDevMode] = useState(false);
   /* ---------------- AUTH GUARD ---------------- */
 
   useEffect(() => {
@@ -815,7 +1575,59 @@ useEffect(() => {
       console.error("Failed to reconnect Gmail:", error.message);
     }
   }
-  
+
+  async function handleConfirmEmailSend(toolCallId: string, payload: EmailSendPayload) {
+    setEmailSendStates((prev) => ({
+      ...prev,
+      [toolCallId]: {
+        status: "sending",
+      },
+    }));
+
+    try {
+      const res = await fetch("/api/gmail/send", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || "Failed to send email.");
+      }
+
+      setEmailSendStates((prev) => ({
+        ...prev,
+        [toolCallId]: {
+          status: "sent",
+          message: "Email sent successfully.",
+        },
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send email.";
+      setEmailSendStates((prev) => ({
+        ...prev,
+        [toolCallId]: {
+          status: "error",
+          message,
+        },
+      }));
+    }
+  }
+
+  function handleCancelEmailSend(toolCallId: string) {
+    setEmailSendStates((prev) => ({
+      ...prev,
+      [toolCallId]: {
+        status: "cancelled",
+        message: "Send cancelled.",
+      },
+    }));
+  }
   if (!user || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -846,7 +1658,7 @@ useEffect(() => {
               />
               <h1
                 className="text-sm font-medium tracking-wide text-muted-foreground"
-                onClick={()=>console.log(removeToolResults(messages))}
+                onClick={()=>console.log()}
               >
                 ClubSync Assistant
               </h1>
@@ -859,6 +1671,27 @@ useEffect(() => {
               >
                 <Home />
               </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={devMode ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => setDevMode((prev) => !prev)}
+                      className="rounded-lg"
+                      aria-pressed={devMode}
+                      aria-label={`Dev mode ${devMode ? "on" : "off"}`}
+                    >
+                      <Bug className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {devMode
+                      ? "Dev mode: shows full tool components."
+                      : "Dev mode off"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
@@ -961,7 +1794,7 @@ useEffect(() => {
                 className="relative h-full w-full items-center"
                 key={chatId}
               >
-                <ChatContainerContent className="px-6 py-2 space-y-2 mt-10">
+                <ChatContainerContent className="px-1 py-2 space-y-2 mt-10">
                   {isLoadingHistory ? (
                     <div className="flex flex-col gap-8 p-8 w-full">
                       {/* User */}
@@ -1002,6 +1835,10 @@ useEffect(() => {
                         speakingId={speakingId}
                         onReadAloud={handleReadAloud}
                         onReconnectGmail={handleReconnectGmail}
+                        emailSendStates={emailSendStates}
+                        onConfirmEmailSend={handleConfirmEmailSend}
+                        onCancelEmailSend={handleCancelEmailSend}
+                        devMode={devMode}
                       />
                     ))
                   )}
