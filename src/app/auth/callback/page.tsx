@@ -33,6 +33,14 @@ export default function AuthCallback() {
           setTimeout(() => {
             if (source === 'signup') {
               router.push('/signup?error=' + encodeURIComponent(redirectMessage));
+            } else if (source === 'gmail-reconnect') {
+              // For Gmail reconnect errors, redirect back to the AI chat page
+              const chatId = urlParams.get('chatId');
+              if (chatId) {
+                router.push(`/ai-assistant/${chatId}?error=` + encodeURIComponent(redirectMessage));
+              } else {
+                router.push('/login?error=' + encodeURIComponent(redirectMessage));
+              }
             } else {
               router.push('/login?error=' + encodeURIComponent(redirectMessage));
             }
@@ -47,6 +55,14 @@ export default function AuthCallback() {
             if (source === 'signup') {
               // For signup, redirect back to signup with success flag
               router.push('/signup?google_success=true');
+            } else if (source === 'gmail-reconnect') {
+              // For Gmail reconnect, redirect back to the AI chat page
+              const chatId = urlParams.get('chatId');
+              if (chatId) {
+                router.push(`/ai-assistant/${chatId}`);
+              } else {
+                router.push('/');
+              }
             } else {
               // For login, check if user exists in database first
               const userEmail = data.session.user.email;
@@ -75,6 +91,13 @@ export default function AuthCallback() {
           setTimeout(() => {
             if (source === 'signup') {
               router.push('/signup?error=' + encodeURIComponent('Authentication failed'));
+            } else if (source === 'gmail-reconnect') {
+              const chatId = urlParams.get('chatId');
+              if (chatId) {
+                router.push(`/ai-assistant/${chatId}?error=` + encodeURIComponent('Gmail reconnection failed'));
+              } else {
+                router.push('/login?error=' + encodeURIComponent('Authentication failed'));
+              }
             } else {
               router.push('/login?error=' + encodeURIComponent('Account not present. Please sign up first.'));
             }

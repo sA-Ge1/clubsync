@@ -305,11 +305,6 @@ export default function SignUpPage() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?source=signup`,
-          scopes: [
-            "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/gmail.send",
-            "https://www.googleapis.com/auth/gmail.modify"
-          ].join(" "),
           queryParams: {
             access_type: "offline",
             prompt: "consent"

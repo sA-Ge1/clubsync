@@ -249,15 +249,10 @@ export default function LoginPage() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?source=login`,
-        scopes: [
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.send",
-        "https://www.googleapis.com/auth/gmail.modify"
-      ].join(" "),
-      queryParams: {
-        access_type: "offline",
-        prompt: "consent"
-      }
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent"
+        }
       },
     });
 

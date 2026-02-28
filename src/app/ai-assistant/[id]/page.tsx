@@ -296,30 +296,6 @@ function EmailSendConfirmationCard({
 }
 
 function EmailDetailView({ email }: { email: any }) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-useEffect(() => {
-  const getTheme = () =>
-    document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light";
-
-  // Set initial theme
-  setTheme(getTheme());
-
-  // Watch for class changes on <html>
-  const observer = new MutationObserver(() => {
-    setTheme(getTheme());
-  });
-
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-
-  return () => observer.disconnect();
-}, []);
-
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(200);
 
@@ -398,11 +374,12 @@ useEffect(() => {
 
     return null;
   };
-const buildIframeDoc = (rawHtml: string,theme: string) => {
-  const isDark = theme === "dark";
+const buildIframeDoc = (rawHtml: string) => {
+  const hasFullDocument = /<\s*!doctype\s+html/i.test(rawHtml) || /<\s*html[\s>]/i.test(rawHtml);
 
-  const background = isDark ? "#000000" : "#ffffff";
-  const textColor = isDark ? "#e5e7eb" : "#111827";
+  if (hasFullDocument) {
+    return rawHtml;
+  }
 
   return `
     <!DOCTYPE html>
@@ -411,14 +388,14 @@ const buildIframeDoc = (rawHtml: string,theme: string) => {
         <meta charset="UTF-8" />
         <style>
           html, body {
-            margin: 0;
-            padding: 0;
-            background: ${background} !important;
-            color: ${textColor};
+            margin: 2px;
+            padding: 2px;
+            background: #f3f4f6;
+            color: #111827;
             font-family: system-ui, -apple-system, sans-serif;
           }
 
-          /* Prevent invisible text */
+          /* Keep wide email content inside viewport */
           body * {
             max-width: 100%;
           }
@@ -447,9 +424,9 @@ const renderBody = () => {
   if (htmlBody) {
     return (
       <iframe
-        key={theme} // 👈 forces reload
+        key={email.id}
         ref={iframeRef}
-        srcDoc={buildIframeDoc(htmlBody, theme || "light")}
+        srcDoc={buildIframeDoc(htmlBody)}
         onLoad={handleIframeLoad}
         sandbox="allow-same-origin"
         className="w-full border-0"
@@ -838,7 +815,7 @@ export const ChatMessage = memo(function ChatMessage({
                     onClick={onReconnectGmail}
                     className="rounded-lg"
                   >
-                    Reconnect Gmail
+                    Connect Gmail
                   </Button>
                 )}
               </div>
@@ -1555,10 +1532,13 @@ useEffect(() => {
   }
 
   async function handleReconnectGmail() {
+    
+    const chatId = params.id;
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?source=login`,
+        redirectTo: `${window.location.origin}/auth/callback?source=gmail-reconnect&chatId=${chatId}`,
         scopes: [
           "https://www.googleapis.com/auth/gmail.readonly",
           "https://www.googleapis.com/auth/gmail.send",
@@ -1658,7 +1638,7 @@ useEffect(() => {
               />
               <h1
                 className="text-sm font-medium tracking-wide text-muted-foreground"
-                onClick={()=>console.log()}
+                onClick={()=>console.log(messages)}
               >
                 ClubSync Assistant
               </h1>
