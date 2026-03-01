@@ -156,6 +156,7 @@ function EmailSendConfirmationCard({
   const [subject, setSubject] = useState(draft?.subject ?? "");
   const [body, setBody] = useState(draft?.body ?? "");
   const [isHtml, setIsHtml] = useState(draft?.isHtml ?? false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     setTo(draft?.to ?? "");
@@ -183,6 +184,44 @@ function EmailSendConfirmationCard({
     Boolean(body.trim()) &&
     !isSending &&
     !isLocked;
+
+  const buildHtmlPreviewDoc = (rawHtml: string) => {
+    const hasFullDocument =
+      /<\s*!doctype\s+html/i.test(rawHtml) || /<\s*html[\s>]/i.test(rawHtml);
+
+    if (hasFullDocument) {
+      return rawHtml;
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <style>
+            html, body {
+              margin: 0;
+              padding: 12px;
+              background: #ffffff;
+              color: #111827;
+              font-family: system-ui, -apple-system, sans-serif;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            table {
+              max-width: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          ${rawHtml}
+        </body>
+      </html>
+    `;
+  };
 
   return (
     <div className="rounded-xl my-10 border-b bg-card p-4 space-y-3">
@@ -244,6 +283,100 @@ function EmailSendConfirmationCard({
       </div>
 
       <div className="flex items-center gap-2">
+        {isHtml && Boolean(body.trim()) && (
+          <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+    <DialogTrigger asChild>
+      <Button size="sm" variant="outline" disabled={isSending}>
+        Preview
+      </Button>
+    </DialogTrigger>
+
+    <DialogContent
+      className="
+        w-full
+        max-w-5xl
+        h-[90vh]
+        flex
+        flex-col
+        p-0
+        overflow-hidden
+        bg-white
+        text-black
+      "
+    >
+      <DialogHeader className="px-6 pt-6 border-b shrink-0">
+        <DialogTitle>Email HTML Preview</DialogTitle>
+        <DialogDescription>
+          Preview of the rendered HTML email before sending.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full w-full overflow-auto">
+          <iframe
+            title="HTML Email Preview"
+            srcDoc={
+              `
+                <!DOCTYPE html>
+                <html>
+                  <head>
+                    <meta charset="UTF-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <style>
+                      html, body {
+                        margin: 0;
+                        padding: 16px;
+                        background: #ffffff;
+                        color: #111827;
+                        font-family: system-ui, -apple-system, sans-serif;
+                        max-width: 100%;
+                        overflow-x: hidden;
+                        box-sizing: border-box;
+                      }
+
+                      *, *::before, *::after {
+                        box-sizing: border-box;
+                        max-width: 100%;
+                      }
+
+                      img {
+                        max-width: 100% !important;
+                        height: auto !important;
+                        display: block;
+                      }
+
+                      table {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        table-layout: fixed !important;
+                        word-break: break-word;
+                      }
+
+                      td, th {
+                        word-break: break-word;
+                      }
+
+                      body > * {
+                        max-width: 100% !important;
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <div style="max-width: 100%; overflow-x: auto;">
+                      ${body}
+                    </div>
+                  </body>
+                </html>
+                `
+            }
+            sandbox="allow-same-origin"
+            className="w-full h-full border-0 block"
+          />
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+        )}
         <Button
           size="sm"
           onClick={() =>
@@ -1638,7 +1771,7 @@ useEffect(() => {
               />
               <h1
                 className="text-sm font-medium tracking-wide text-muted-foreground"
-                onClick={()=>console.log(messages)}
+                onClick={()=>console.log()}
               >
                 ClubSync Assistant
               </h1>
@@ -1917,6 +2050,17 @@ useEffect(() => {
                       }
                     >
                       Analyze Income
+                    </PromptSuggestion>
+
+                    <PromptSuggestion
+                      className="bg-purple-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                      onClick={() =>
+                        setInput(
+                          "Check my recent emails and summarize any important information related to club activities or communications.",
+                        )
+                      }
+                    >
+                      Check Recent Emails
                     </PromptSuggestion>
                   </div>
                 </div>

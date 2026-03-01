@@ -10,6 +10,7 @@ const menuItems = [
   { name: "Clubs", href: "/clubs", description: "Visit All Clubs and View Basic Info" },
   { name: "Inventory", href: "/inventory", description: "Browse Through Inventory present" },
   { name: "Admin", href: "/dashboard", description: "Admin Dashboard For Complete Access" },
+  { name: "AI assistant", href: "/ai-assistant", description: "AI Assistant For Quick Help" },
   { name: "Login", href: "/login", description: "Login To Your Account" },
   { name: "Sign up", href: "/signup", description: "Create New Account" },
   { name: "Departments", href: "/departments", description: "View Departments And Faculty Members" },
@@ -20,7 +21,7 @@ const menuItems = [
 
 export default function MenuTable() {
   return (
-    <section className="w-full mb-20 flex flex-col justify-center items-center bg-background py-20" id="links">
+    <section className="w-full mb-20 flex flex-col justify-center items-center py-20" id="links">
         <h2 className="text-4xl font-extrabold mb-20 text-center">
           Quick <span className="text-primary">Links</span>
         </h2>

@@ -164,47 +164,33 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: AppSidebarProps
   };
 
 
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="border-b border-sidebar-border">
+return (
+  <Sidebar collapsible="icon" {...props}>
+    <SidebarHeader className="border-b border-sidebar-border">
       <div
         className={cn(
-          "flex items-center gap-2 px-2 py-2 transition-all",
-          isMobile && openMobile
-            ? "justify-center"
-            : isExpanded
-            ? "justify-start"
-            : "justify-center"
+          "flex items-center gap-2 px-3 py-3 transition-all justify-start"
         )}
       >
-        <div
-          className={cn(
-            "transition-opacity duration-200 shrink-0",
-            isMobile ? "opacity-100" : isExpanded ? "opacity-0" : "opacity-100"
-          )}
-        >
-          <Snowflake className=" ml-2 w-5 h-5" />
-        </div>
+        {/* Icon - always visible */}
+        <div className="w-5 h-10 shrink-0" />
 
-        <span
-          className={cn(
-            "text-xl font-bold truncate transition-opacity duration-200",
-            isExpanded ? "opacity-100" : "opacity-0"
-          )}
-        >
-          ClubSync
-        </span>
       </div>
+    </SidebarHeader>
 
+    <SidebarContent>
+      <NavMain
+        items={navMain}
+        activeTab={activeTab}
+        onTabClick={handleTabClick}
+      />
+    </SidebarContent>
 
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={navMain} activeTab={activeTab} onTabClick={handleTabClick} />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={userData} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  )
+    <SidebarFooter>
+      <NavUser user={userData} />
+    </SidebarFooter>
+
+    <SidebarRail />
+  </Sidebar>
+)
 }

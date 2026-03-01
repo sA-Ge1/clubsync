@@ -92,27 +92,6 @@ export default function LoginPage() {
     return emailRegex.test(email);
   };
 
-  // Check if user exists in database
-  const checkUserExists = async (email: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('auth')
-        .select('id')
-        .eq('email', email)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-        console.error('Error checking user existence:', error);
-        return false;
-      }
-      
-      return !!data; // Return true if user exists, false if not
-    } catch (err) {
-      console.error('Error checking user existence:', err);
-      return false;
-    }
-  };
-
   // Handle auth callback errors
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -168,16 +147,7 @@ export default function LoginPage() {
     setIsSendingOTP(true);
     setError("");
 
-    // First check if user exists in our database
-    const userExists = await checkUserExists(email);
-    
-    if (!userExists) {
-      setError("Account not present. Please sign up first.");
-      setShowRedirectMessage(true);
-      setRedirectCountdown(8); // Start 8-second countdown
-      setIsSendingOTP(false);
-      return;
-    }
+
 
     // If user exists in database, proceed with OTP
     const { data: existingUser, error: checkError } = await supabase.auth.signInWithOtp({
@@ -219,17 +189,6 @@ export default function LoginPage() {
     if (error) {
       await signOutAndReset(error.message);
     } else if (data.user) {
-      // Double-check that user exists in database before allowing login
-      const userExists = await checkUserExists(email);
-      
-      if (!userExists) {
-        await signOutAndReset("Account not present. Please sign up first.");
-        setShowRedirectMessage(true);
-        setRedirectCountdown(8);
-        setIsVerifyingOTP(false);
-        return;
-      }
-      
       setVerified(true);
       setError("");
       // Redirect to user dashboard

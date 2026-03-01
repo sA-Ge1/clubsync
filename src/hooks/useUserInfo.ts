@@ -93,7 +93,7 @@ export function UserProvider({ children }: UserProviderProps) {
       name: session?.user?.user_metadata?.name ?? "",
       role,
       user_id: derivedId,
-      avatar: session?.user?.user_metadata?.avatar || ""
+      avatar: session?.user?.user_metadata?.avatar_url || ""
     });
 
     setLoading(false);
