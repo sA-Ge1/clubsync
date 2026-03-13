@@ -211,7 +211,6 @@ export default function Home() {
                       Get Started
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Button>
                   <Button
                     size="lg"
